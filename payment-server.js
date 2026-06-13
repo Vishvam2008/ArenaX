@@ -173,7 +173,157 @@ const server = http.createServer(async (req, res) => {
       return jsonResponse(res, 200, { success: true, apk: activeApk });
     }
 
+    if (req.method === 'GET' && url === '/api/leaderboard') {
+      try {
+        const localDb = db.localDb;
+        let leaders = [];
+        if (db.usePostgres) {
+          const q = `
+            SELECT 
+              u.username AS name,
+              t.mode AS mode,
+              SUM(COALESCE(mr.kills, 0))::int AS kills,
+              COUNT(CASE WHEN mr.rank = 1 OR mr.booyah = true THEN 1 END)::int AS wins
+            FROM users u
+            JOIN match_results mr ON u.id = mr.user_id
+            JOIN tournaments t ON mr.tournament_id = t.id
+            WHERE mr.status = 'Approved'
+            GROUP BY u.username, t.mode
+          `;
+          const resRows = await db.query(q);
+          leaders = resRows.rows.map(row => {
+            const kills = Number(row.kills || 0);
+            const wins = Number(row.wins || 0);
+            const points = (kills * 10) + (wins * 100);
+            return {
+              name: row.name,
+              mode: row.mode || 'Solo',
+              kills,
+              wins,
+              points
+            };
+          });
+        } else {
+          const matchResults = localDb.match_results || [];
+          const users = localDb.users || [];
+          const tournaments = localDb.tournaments || [];
+          const statsMap = {};
+          
+          matchResults.forEach(mr => {
+            if (mr.status !== 'Approved') return;
+            const u = users.find(x => x.id === mr.user_id);
+            const t = tournaments.find(x => x.id === mr.tournament_id);
+            if (!u || !t) return;
+            
+            const key = `${u.username}_${t.mode}`;
+            if (!statsMap[key]) {
+              statsMap[key] = {
+                name: u.username,
+                mode: t.mode,
+                kills: 0,
+                wins: 0
+              };
+            }
+            statsMap[key].kills += Number(mr.kills || 0);
+            if (mr.rank === 1 || mr.booyah) {
+              statsMap[key].wins += 1;
+            }
+          });
+          
+          leaders = Object.values(statsMap).map(item => {
+            return {
+              name: item.name,
+              mode: item.mode,
+              kills: item.kills,
+              wins: item.wins,
+              points: (item.kills * 10) + (item.wins * 100)
+            };
+          });
+        }
+        
+        // Populate default values using actual database users to ensure leaderboard is never empty
+        const allUsers = db.usePostgres 
+          ? (await db.query('SELECT username FROM users')).rows.map(r => r.username)
+          : (localDb.users || []).map(u => u.username);
+          
+        allUsers.forEach(username => {
+          ['Solo', 'Squad'].forEach(mode => {
+            const exists = leaders.some(l => l.name === username && l.mode === mode);
+            if (!exists) {
+              leaders.push({
+                name: username,
+                mode: mode,
+                kills: 0,
+                wins: 0,
+                points: 0
+              });
+            }
+          });
+        });
+
+        leaders.sort((a, b) => b.points - a.points);
+        return jsonResponse(res, 200, { success: true, leaders });
+      } catch (err) {
+        console.error('[Leaderboard API Error]', err);
+        return jsonResponse(res, 500, { success: false, error: 'Internal server error' });
+      }
+    }
+
+    if (req.method === 'GET' && url === '/api/winners') {
+      try {
+        const localDb = db.localDb;
+        let winners = [];
+        if (db.usePostgres) {
+          const q = `
+            SELECT 
+              u.username AS name,
+              t.title AS tournament,
+              p.winnings::int AS prize,
+              COALESCE(t.completed_at, t.created_at) AS date
+            FROM participants p
+            JOIN users u ON p.user_id = u.id
+            JOIN tournaments t ON p.tournament_id = t.id
+            WHERE p.winnings > 0
+            ORDER BY date DESC
+            LIMIT 10
+          `;
+          const resRows = await db.query(q);
+          winners = resRows.rows.map(row => ({
+            name: row.name,
+            tournament: row.tournament,
+            prize: Number(row.prize),
+            date: row.date ? new Date(row.date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]
+          }));
+        } else {
+          const participants = localDb.participants || [];
+          const users = localDb.users || [];
+          const tournaments = localDb.tournaments || [];
+          
+          winners = participants
+            .filter(p => Number(p.winnings) > 0)
+            .map(p => {
+              const u = users.find(x => x.id === p.user_id);
+              const t = tournaments.find(x => x.id === p.tournament_id);
+              return {
+                name: u ? u.username : 'Unknown',
+                tournament: t ? t.title : 'Tournament',
+                prize: Number(p.winnings),
+                date: t ? (t.completed_at || t.created_at || new Date().toISOString()).split('T')[0] : new Date().toISOString().split('T')[0]
+              };
+            });
+            
+          winners.sort((a, b) => new Date(b.date) - new Date(a.date));
+          winners = winners.slice(0, 10);
+        }
+        return jsonResponse(res, 200, { success: true, winners });
+      } catch (err) {
+        console.error('[Winners API Error]', err);
+        return jsonResponse(res, 500, { success: false, error: 'Internal server error' });
+      }
+    }
+
     // ── PLAYER AUTHENTICATION ─────────────────────────────────
+
     if (req.method === 'POST' && url === '/api/auth/register') {
       const body = await readBody(req);
       const { username, email, password, phone, freeFireUid, freeFireUsername } = body;
@@ -588,7 +738,11 @@ const server = http.createServer(async (req, res) => {
           frozen: wallet ? wallet.frozen : false,
           withdrawalsBlocked: wallet ? wallet.withdrawals_blocked : false,
           fraudFlags: u.fraud_flags,
-          banHistory: u.ban_history
+          banHistory: u.ban_history,
+          totalTournaments: u.total_tournaments || 0,
+          totalWinnings: u.total_winnings || 0,
+          totalWithdrawals: u.total_withdrawals || 0,
+          rejectedResults: u.rejected_results || 0
         };
       }));
       return jsonResponse(res, 200, { success: true, users: enriched });

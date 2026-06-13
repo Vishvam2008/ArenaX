@@ -115,6 +115,7 @@ async function query(text, params) {
 const db = {
   usePostgres,
   query,
+  localDb,
   
   // ── AUDIT LOGS ─────────────────────────────────────────────────────────────
   auditLogs: {

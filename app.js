@@ -9,13 +9,7 @@ const state = {
   wallets: {},
   currentUser: null,
   tournaments: [],
-  leaders: [
-    { name: "RogueRavi", mode: "Solo", kills: 86, wins: 14, points: 1840 },
-    { name: "NovaAditi", mode: "Squad", kills: 74, wins: 12, points: 1725 },
-    { name: "BlazeX", mode: "Solo", kills: 69, wins: 10, points: 1604 },
-    { name: "Team Vortex", mode: "Squad", kills: 122, wins: 9, points: 1550 },
-    { name: "KiraOP", mode: "Solo", kills: 58, wins: 8, points: 1408 }
-  ],
+  leaders: [],
   _walletBalance: 0,
   _walletFrozen: false,
   _withdrawalsBlocked: false
@@ -65,6 +59,24 @@ async function loadStateFromServer() {
   }
 
   try {
+    const res = await apiFetch("/api/leaderboard");
+    if (res.success && res.leaders) {
+      state.leaders = res.leaders;
+    }
+  } catch (err) {
+    console.warn("Failed to load leaderboard from database:", err.message);
+  }
+
+  try {
+    const res = await apiFetch("/api/winners");
+    if (res.success && res.winners) {
+      state.recentWinners = res.winners;
+    }
+  } catch (err) {
+    console.warn("Failed to load recent winners from database:", err.message);
+  }
+
+  try {
     const res = await apiFetch("/api/apk/version");
     if (res.success && res.apk) {
       const chip = document.querySelector(".version-chip");
@@ -89,6 +101,7 @@ async function loadStateFromServer() {
   }
   
   if (typeof renderTournaments === "function") renderTournaments();
+  if (typeof renderLeaderboard === "function") renderLeaderboard();
 }
 
 function saveStateToLocalStorage() {

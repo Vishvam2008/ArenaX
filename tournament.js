@@ -9,19 +9,9 @@
 state.tournamentNextId = state.tournamentNextId || 100;
 state.activeTournamentView = state.activeTournamentView || null;
 state.tournamentStatusFilter = state.tournamentStatusFilter || "all";
-state.recentWinners = state.recentWinners || [
-  { name: "RogueRavi", tournament: "Free Fire Max Clash", prize: 500, date: "2026-06-12" },
-  { name: "NovaAditi", tournament: "Solo Headshot Rush", prize: 250, date: "2026-06-11" },
-  { name: "BlazeX", tournament: "Grandmaster Squad Cup", prize: 1200, date: "2026-06-10" }
-];
-state.hallOfFame = state.hallOfFame || [
-  { name: "RogueRavi", earnings: 14200, wins: 14, kills: 86 },
-  { name: "NovaAditi", earnings: 11800, wins: 12, kills: 74 },
-  { name: "BlazeX", earnings: 9500, wins: 10, kills: 69 }
-];
-state.playerProfiles = state.playerProfiles || {
-  "USR102": { totalTournaments: 6, totalWinnings: 1840, totalWithdrawals: 500, rejectedResults: 0, fraudFlags: [], banHistory: [], isBanned: false }
-};
+state.recentWinners = state.recentWinners || [];
+state.hallOfFame = state.hallOfFame || [];
+state.playerProfiles = state.playerProfiles || {};
 
 // Enhance existing tournaments with new fields
 (function enhanceTournaments() {
