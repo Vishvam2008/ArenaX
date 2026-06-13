@@ -18,22 +18,173 @@
   }
 })();
 
+function adminApiFetch(path, options = {}) {
+  if (!state.adminSession || !state.adminSession.authHeader) {
+    return Promise.reject(new Error("No active admin session"));
+  }
+  options.headers = options.headers || {};
+  options.headers['Authorization'] = state.adminSession.authHeader;
+  if (options.body && typeof options.body === 'object') {
+    options.headers['Content-Type'] = 'application/json';
+    options.body = JSON.stringify(options.body);
+  }
+  return fetch("http://localhost:4400" + path, options)
+    .then(function(res) {
+      if (res.status === 401) {
+        throw new Error("Unauthorized administrative session.");
+      }
+      if (!res.ok) {
+        return res.json().then(function(err) { throw new Error(err.error || "Server error"); })
+          .catch(function() { throw new Error("Server error (" + res.status + ")"); });
+      }
+      return res.json();
+    });
+}
+window.adminApiFetch = adminApiFetch;
+
+function syncAdminUsers() {
+  if (!state.adminSession || !state.adminSession.authHeader) return Promise.resolve();
+  return adminApiFetch("/api/admin/users")
+    .then(function(res) {
+      if (res.success && res.users) {
+        state.users = res.users;
+        state.wallets = state.wallets || {};
+        res.users.forEach(function(u) {
+          state.wallets[u.id] = {
+            balance: u.wallet,
+            frozen: u.frozen,
+            withdrawalsBlocked: u.withdrawalsBlocked
+          };
+          if (!state.playerProfiles[u.id]) {
+            state.playerProfiles[u.id] = {
+              totalTournaments: 0,
+              totalWinnings: 0,
+              totalWithdrawals: 0,
+              rejectedResults: 0,
+              fraudFlags: u.fraudFlags || [],
+              banHistory: u.banHistory || [],
+              isBanned: u.isBanned
+            };
+          } else {
+            state.playerProfiles[u.id].isBanned = u.isBanned;
+            state.playerProfiles[u.id].fraudFlags = u.fraudFlags || [];
+            state.playerProfiles[u.id].banHistory = u.banHistory || [];
+          }
+        });
+        renderAdminUsers();
+      }
+    })
+    .catch(function(err) {
+      console.warn("Failed to sync users with server:", err);
+    });
+}
+window.syncAdminUsers = syncAdminUsers;
+
+function syncAdminTournaments() {
+  if (!state.adminSession || !state.adminSession.authHeader) return Promise.resolve();
+  return adminApiFetch("/api/admin/tournaments")
+    .then(function(res) {
+      if (res.success && res.tournaments) {
+        state.tournaments = res.tournaments;
+        if (typeof renderTournaments === "function") renderTournaments();
+        if (typeof renderAdminTournaments === "function") renderAdminTournaments();
+        if (typeof renderTournamentAnalytics === "function") renderTournamentAnalytics();
+      }
+    })
+    .catch(function(err) {
+      console.warn("Failed to sync tournaments with server:", err);
+    });
+}
+window.syncAdminTournaments = syncAdminTournaments;
+
+function syncAdminRequests() {
+  if (!state.adminSession || !state.adminSession.authHeader) return Promise.resolve();
+  return adminApiFetch("/api/admin/requests")
+    .then(function(res) {
+      if (res.success && res.requests) {
+        const mappedWithdrawals = res.requests.map(w => ({
+          id: w.id,
+          type: 'Withdrawal',
+          userId: w.user_id,
+          user: w.username || w.user_id,
+          amount: w.amount,
+          status: w.status,
+          reason: `UPI: ${w.upi_id}`
+        }));
+        
+        const mappedDeposits = (state.paymentRequests || [])
+          .filter(p => p.status === 'Pending Verification')
+          .map(p => ({
+            id: p.request_id,
+            type: 'Deposit',
+            userId: p.user_id,
+            user: p.userName || p.username || p.user_id,
+            amount: p.amount,
+            status: p.status,
+            reason: `UTR: ${p.utr_number}`
+          }));
+          
+        state.requests = mappedDeposits.concat(mappedWithdrawals);
+        if (typeof renderRequests === "function") renderRequests();
+      }
+    })
+    .catch(function(err) {
+      console.warn("Failed to sync requests:", err);
+    });
+}
+window.syncAdminRequests = syncAdminRequests;
+
+function syncAdminAuditLogs() {
+  if (!state.adminSession || !state.adminSession.authHeader) return Promise.resolve();
+  return adminApiFetch("/api/admin/audit")
+    .then(function(res) {
+      if (res.success && res.audit) {
+        state.audit = res.audit.map(log => {
+          const time = new Date(log.created_at).toLocaleString("en-IN");
+          return `[${time}] ${log.admin_username ? 'Admin ' + log.admin_username : 'System'}: ${log.action}`;
+        });
+        if (typeof renderAudit === "function") renderAudit();
+      }
+    })
+    .catch(function(err) {
+      console.warn("Failed to sync audit logs:", err);
+    });
+}
+window.syncAdminAuditLogs = syncAdminAuditLogs;
+
 function getAdmins() {
-  return JSON.parse(localStorage.getItem("ax_admins") || "[]");
+  return state.admins || [];
 }
 
 function saveAdmins(admins) {
-  localStorage.setItem("ax_admins", JSON.stringify(admins));
+  state.admins = admins;
   if (state.adminSession && state.adminSession.authHeader) {
-    fetch("http://localhost:4400/api/admins", {
+    adminApiFetch("/api/admins", {
       method: "POST",
-      headers: {
-        'Authorization': state.adminSession.authHeader,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(admins)
-    }).catch(function(err) { console.warn("Could not save admins to server:", err); });
+      body: admins
+    })
+    .then(function(res) {
+      if (res.success && res.admins) {
+        state.admins = res.admins;
+        renderAdminManagement();
+      }
+    })
+    .catch(function(err) {
+      showToast("Failed to save admins: " + err.message);
+    });
   }
+}
+
+function syncAdminsWithServer() {
+  if (!state.adminSession || !state.adminSession.authHeader) return;
+  adminApiFetch("/api/admins")
+  .then(function(res) {
+    if (res.success && res.admins) {
+      state.admins = res.admins;
+      renderAdminManagement();
+    }
+  })
+  .catch(function(err) { console.warn("Failed to sync admins with server:", err); });
 }
 
 // --------------- Extend Global State ---------------
@@ -292,11 +443,13 @@ setView = function(view) {
   _originalSetView(view);
   if (view === "admin" && state.adminAuthenticated) {
     renderAdminSession();
+    if (typeof syncAdminUsers === "function") syncAdminUsers();
+    if (typeof syncAdminTournaments === "function") syncAdminTournaments();
+    if (typeof syncAdminRequests === "function") syncAdminRequests();
+    if (typeof syncAdminAuditLogs === "function") syncAdminAuditLogs();
     if (typeof renderAdminPayments === "function") renderAdminPayments();
     if (typeof renderQRConfig === "function") renderQRConfig();
-    if (typeof renderAdminTournaments === "function") renderAdminTournaments();
     if (typeof renderAdminManagement === "function") renderAdminManagement();
-    if (typeof renderTournamentAnalytics === "function") renderTournamentAnalytics();
   }
 };
 
@@ -363,3 +516,91 @@ document.addEventListener("keydown", function(e) {
 if (!state.adminAuthenticated && (window.location.hash === "#admin" || window.location.hash === "#/admin")) {
   setTimeout(handleAdminRoute, 100);
 }
+
+// =============================================================
+// ADMINISTRATIVE USER MANAGEMENT & CONTROLS
+// =============================================================
+
+function renderAdminUsers() {
+  var container = document.getElementById("adminUsersList");
+  if (!container) return;
+  
+  if (!state.users || state.users.length === 0) {
+    container.innerHTML = '<div class="empty-state"><span>No registered players</span></div>';
+    return;
+  }
+  
+  container.innerHTML = state.users.map(function(u) {
+    var wallet = state.wallets[u.id] || { balance: 0, frozen: false, withdrawalsBlocked: false };
+    
+    return '<div class="admin-user-card">' +
+      '<div class="admin-user-card-header">' +
+        '<strong>' + escapeHTML(u.username) + ' (' + escapeHTML(u.id) + ')</strong>' +
+        '<span class="balance-chip" style="margin:0;">\u20B9' + wallet.balance + '</span>' +
+      '</div>' +
+      '<div class="admin-user-card-details">' +
+        '<div>Email: <strong>' + escapeHTML(u.email) + '</strong></div>' +
+        '<div>Phone: <strong>' + escapeHTML(u.phone) + '</strong></div>' +
+        '<div>FF UID: <strong>' + escapeHTML(u.freeFireUid || "None") + '</strong></div>' +
+        '<div>FF Name: <strong>' + escapeHTML(u.freeFireUsername || "None") + '</strong></div>' +
+        '<div>Frozen: <strong>' + (wallet.frozen ? "Yes" : "No") + '</strong></div>' +
+        '<div>Block Withdraw: <strong>' + (wallet.withdrawalsBlocked ? "Yes" : "No") + '</strong></div>' +
+      '</div>' +
+      '<div class="admin-user-card-actions">' +
+        '<button type="button" onclick="populateAdminWalletForm(\'' + escapeHTML(u.username) + '\')">Manage Wallet</button>' +
+        '<button type="button" class="btn-danger" onclick="toggleUserFreeze(\'' + escapeHTML(u.id) + '\')">' + (wallet.frozen ? "Unfreeze" : "Freeze") + '</button>' +
+        '<button type="button" onclick="toggleUserWithdrawalBlock(\'' + escapeHTML(u.id) + '\')">' + (wallet.withdrawalsBlocked ? "Allow Withdraw" : "Block Withdraw") + '</button>' +
+      '</div>' +
+    '</div>';
+  }).join("");
+}
+
+function populateAdminWalletForm(username) {
+  var userField = document.querySelector("#walletAdminForm [name='user']");
+  if (userField) {
+    userField.value = username;
+    document.getElementById("walletAdminForm").scrollIntoView({ behavior: 'smooth' });
+    showToast("Wallet management form populated for " + username);
+  }
+}
+
+function toggleUserFreeze(userId) {
+  var wallet = state.wallets[userId] || { frozen: false };
+  var newFrozen = !wallet.frozen;
+  adminApiFetch("/api/admin/users/status", {
+    method: "POST",
+    body: { userId: userId, frozen: newFrozen }
+  })
+  .then(function(res) {
+    if (res.success) {
+      showToast("Freeze status updated for user " + userId);
+      syncAdminUsers();
+    }
+  })
+  .catch(function(err) {
+    showToast("Failed to update status: " + err.message);
+  });
+}
+
+function toggleUserWithdrawalBlock(userId) {
+  var wallet = state.wallets[userId] || { withdrawalsBlocked: false };
+  var newBlock = !wallet.withdrawalsBlocked;
+  adminApiFetch("/api/admin/users/status", {
+    method: "POST",
+    body: { userId: userId, withdrawalsBlocked: newBlock }
+  })
+  .then(function(res) {
+    if (res.success) {
+      showToast("Withdrawal block status updated for user " + userId);
+      syncAdminUsers();
+    }
+  })
+  .catch(function(err) {
+    showToast("Failed to update status: " + err.message);
+  });
+}
+
+window.renderAdminUsers = renderAdminUsers;
+window.populateAdminWalletForm = populateAdminWalletForm;
+window.toggleUserFreeze = toggleUserFreeze;
+window.toggleUserWithdrawalBlock = toggleUserWithdrawalBlock;

@@ -112,6 +112,7 @@
             <button class="tournament-filter-tab" type="button" data-tournament-status-filter="registration_open">Open</button>
             <button class="tournament-filter-tab" type="button" data-tournament-status-filter="live">Live</button>
             <button class="tournament-filter-tab" type="button" data-tournament-status-filter="completed">Completed</button>
+            <button class="tournament-filter-tab" type="button" data-tournament-status-filter="my_tournaments">My Matches</button>
           </div>
 
           <!-- Main Tournament List -->
@@ -134,6 +135,33 @@
             </div>
             <span class="balance-chip">&#8377;<b id="walletBalance">420</b></span>
           </div>
+
+          <!-- Player Profile Display -->
+          <div class="player-profile-card" id="playerProfileCard">
+            <div class="profile-header">
+              <div class="profile-avatar" id="profileAvatar">R</div>
+              <div class="profile-user-info">
+                <h3 id="profileUsername">RogueRavi</h3>
+                <span id="profileEmail">rogue@arenax.gg</span>
+              </div>
+              <button class="logout-button" type="button" onclick="logoutPlayer()">Logout</button>
+            </div>
+            <div class="profile-details-grid">
+              <div>
+                <small>Phone Number</small>
+                <strong id="profilePhone">9876543210</strong>
+              </div>
+              <div>
+                <small>Free Fire UID</small>
+                <strong id="profileFfUid">543210987</strong>
+              </div>
+              <div>
+                <small>Free Fire Username</small>
+                <strong id="profileFfUsername">RogueRavi_FF</strong>
+              </div>
+            </div>
+          </div>
+
           <div class="wallet-grid">
             <!-- Deposit Wizard -->
             <div class="deposit-wizard" id="depositWizard">
@@ -511,6 +539,10 @@
                 <span>Full, partial, and manual refunds require a reason.</span>
               </div>
               <label>
+                User (Username/ID/FF UID)
+                <input name="refundUser" required value="RogueRavi">
+              </label>
+              <label>
                 Refund type
                 <select name="refundType" required>
                   <option>Full refund</option>
@@ -578,6 +610,15 @@
 
               <strong>Administrative Accounts List</strong>
               <div class="admin-management-list" id="adminManagementList" style="margin-top: 10px;"></div>
+            </div>
+
+            <!-- Player Accounts & Wallet Management (Admin View) -->
+            <div class="control-form">
+              <div class="form-heading">
+                <strong>Player Accounts & Wallet Management</strong>
+                <span>View all registered users, their current wallet balances, and account risk profiles.</span>
+              </div>
+              <div class="admin-users-list" id="adminUsersList" style="margin-top: 10px;"></div>
             </div>
 
             <div class="control-form">
@@ -672,6 +713,124 @@
         <div class="lightbox-toolbar">
           <button type="button" id="lightboxDownload">Download</button>
         </div>
+      </div>
+    </div>
+
+    <!-- Player Authentication Overlay -->
+    <div class="player-auth-overlay active" id="playerAuthOverlay">
+      <div class="player-auth-card">
+        <div class="auth-tabs">
+          <button type="button" class="auth-tab active" id="authTabLogin" onclick="switchAuthTab('login')">Login</button>
+          <button type="button" class="auth-tab" id="authTabRegister" onclick="switchAuthTab('register')">Register</button>
+          <button type="button" class="auth-tab" id="authTabReset" onclick="switchAuthTab('reset')">Reset</button>
+        </div>
+        
+        <!-- Login Form -->
+        <form id="playerLoginForm" onsubmit="handlePlayerLogin(event)">
+          <h2>Welcome Back</h2>
+          <p>Log in to manage your wallet and tournaments</p>
+          <label>
+            Username
+            <input type="text" id="loginUsername" required placeholder="Enter username">
+          </label>
+          <label>
+            Password
+            <input type="password" id="loginPassword" required placeholder="Enter password">
+          </label>
+          <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-weight:normal; margin-bottom:14px; margin-top:8px;">
+            <input type="checkbox" id="loginRememberMe" checked style="width:auto; min-height:auto;"> Remember Me
+          </label>
+          <button class="primary-action" type="submit" style="width:100%; margin-top:8px;">Login</button>
+          <div class="player-auth-error" id="loginError"></div>
+        </form>
+        
+        <!-- Register Form -->
+        <form id="playerRegisterForm" onsubmit="handlePlayerRegister(event)" style="display:none;">
+          <h2>Create Account</h2>
+          <p>Join ArenaX and start competing</p>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+            <label>
+              Username
+              <input type="text" id="regUsername" required placeholder="Username">
+            </label>
+            <label>
+              Email
+              <input type="email" id="regEmail" required placeholder="Email">
+            </label>
+          </div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+            <label>
+              Password (min 8 chars)
+              <input type="password" id="regPassword" required placeholder="Password">
+            </label>
+            <label>
+              Phone Number
+              <input type="text" id="regPhone" required placeholder="Phone">
+            </label>
+          </div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+            <label>
+              Free Fire UID
+              <input type="text" id="regFfUid" required placeholder="FF UID">
+            </label>
+            <label>
+              Free Fire Username
+              <input type="text" id="regFfUsername" required placeholder="FF Username">
+            </label>
+          </div>
+          <button class="primary-action" type="submit" style="width:100%; margin-top:8px;">Register</button>
+          <div class="player-auth-error" id="registerError"></div>
+        </form>
+        
+        <!-- Reset Form -->
+        <form id="playerResetForm" onsubmit="event.preventDefault();" style="display:none;">
+          <h2>Password Reset</h2>
+          <p>Verification token is required to reset password</p>
+          
+          <div id="resetStep1">
+            <label>
+              Username
+              <input type="text" id="resetUsername" placeholder="Enter username">
+            </label>
+            <label>
+              Email Address
+              <input type="email" id="resetEmail" placeholder="Enter email">
+            </label>
+            <button class="primary-action" type="button" onclick="requestResetToken()" style="width:100%; margin-top:8px;">Request Reset Token</button>
+          </div>
+          
+          <div id="resetStep2" style="display:none;">
+            <div class="player-auth-success show" style="margin-bottom:12px; margin-top:0;" id="resetTokenNotification"></div>
+            <label>
+              Verification Token (6-digit)
+              <input type="text" id="resetTokenInput" placeholder="Enter 6-digit token">
+            </label>
+            <label>
+              New Password (min 8 chars)
+              <input type="password" id="resetNewPassword" placeholder="Enter new password">
+            </label>
+            <button class="primary-action" type="button" onclick="confirmPasswordReset()" style="width:100%; margin-top:8px;">Confirm Password Reset</button>
+          </div>
+
+          <div class="player-auth-error" id="resetError"></div>
+          <div class="player-auth-success" id="resetSuccess"></div>
+        </form>
+
+        <!-- Force Password Change Form (for Migrated Demo Accounts) -->
+        <form id="playerForceResetForm" onsubmit="handlePlayerForceReset(event)" style="display:none;">
+          <h2>Change Initial Password</h2>
+          <p>Security Requirement: You must change your initial demo password before continuing.</p>
+          <label>
+            New Password (min 8 chars)
+            <input type="password" id="forceNewPassword" required placeholder="Enter new password">
+          </label>
+          <label>
+            Confirm New Password
+            <input type="password" id="forceConfirmPassword" required placeholder="Confirm new password">
+          </label>
+          <button class="primary-action" type="submit" style="width:100%; margin-top:8px;">Update & Log In</button>
+          <div class="player-auth-error" id="forceResetError"></div>
+        </form>
       </div>
     </div>
 

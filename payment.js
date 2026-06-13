@@ -180,11 +180,18 @@ function submitPaymentRequest() {
 function renderUserPayments() {
   var container = document.getElementById("paymentHistoryList");
   if (!container) return;
-  if (state.paymentRequests.length === 0) {
-    container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">\u{1F4CB}</div><span>No payment requests yet</span></div>';
+  if (!state.currentUser) {
+    container.innerHTML = '<div class="empty-state"><span>Log in to view deposits</span></div>';
     return;
   }
-  container.innerHTML = state.paymentRequests.map(function(req) {
+  var userRequests = state.paymentRequests.filter(function(r) {
+    return r.userId === state.currentUser.id;
+  });
+  if (userRequests.length === 0) {
+    container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">\uD83D\uDCCB</div><span>No payment requests yet</span></div>';
+    return;
+  }
+  container.innerHTML = userRequests.map(function(req) {
     var cls = req.status === "Approved" ? "approved" : req.status === "Rejected" ? "rejected" : "pending";
     var date = new Date(req.submittedAt).toLocaleString("en-IN");
     return '<div class="payment-history-item">' +
@@ -291,7 +298,6 @@ function approvePayment(requestId) {
   var adminNotes = notesEl ? notesEl.value.trim() : "";
   var reviewedAt = new Date().toISOString();
 
-  // Prepare updated copy
   var updatedReq = { ...req, status: "Approved", reviewedAt: reviewedAt, adminNotes: adminNotes };
 
   showToast("Processing approval...");
@@ -305,22 +311,11 @@ function approvePayment(requestId) {
         req.screenshotFilename = res.filename;
       }
 
-      applyAdminCredit("Approved deposit", req.amount, "Admin approved payment " + requestId + " for " + req.userName + ". UTR: " + req.utrNumber + ". Wallet credited " + rupees(req.amount) + ".");
-
-      if (req.linkedRequestId) {
-        var linked = state.requests.find(function(r) { return r.id === req.linkedRequestId; });
-        if (linked) {
-          linked.status = "Approved";
-          state.requests = state.requests.filter(function(r) { return r.id !== req.linkedRequestId; });
-        }
-      }
-
-      audit("Payment " + requestId + " APPROVED by " + (state.adminSession?.username || "Admin") + ". " + req.userName + " credited " + rupees(req.amount) + ". UTR: " + req.utrNumber + ".");
-      renderAdminPayments();
-      renderUserPayments();
-      renderRequests();
-      if (typeof saveStateToLocalStorage === "function") saveStateToLocalStorage();
-      showToast("Payment " + requestId + " approved. " + rupees(req.amount) + " credited.");
+      if (typeof syncAdminUsers === "function") syncAdminUsers();
+      if (typeof syncAdminRequests === "function") syncAdminRequests();
+      if (typeof syncAdminAuditLogs === "function") syncAdminAuditLogs();
+      if (typeof loadPaymentsFromServer === "function") loadPaymentsFromServer();
+      showToast("Payment " + requestId + " approved. Wallet credited.");
     })
     .catch(function(err) {
       console.error("Approval failed:", err);
@@ -354,19 +349,10 @@ function rejectPayment(requestId) {
         req.screenshotFilename = res.filename;
       }
 
-      if (req.linkedRequestId) {
-        var linked = state.requests.find(function(r) { return r.id === req.linkedRequestId; });
-        if (linked) {
-          linked.status = "Rejected";
-          state.requests = state.requests.filter(function(r) { return r.id !== req.linkedRequestId; });
-        }
-      }
-
-      audit("Payment " + requestId + " REJECTED by " + (state.adminSession?.username || "Admin") + ". Reason: " + reason + ". No wallet change. UTR: " + req.utrNumber + ".");
-      renderAdminPayments();
-      renderUserPayments();
-      renderRequests();
-      if (typeof saveStateToLocalStorage === "function") saveStateToLocalStorage();
+      if (typeof syncAdminUsers === "function") syncAdminUsers();
+      if (typeof syncAdminRequests === "function") syncAdminRequests();
+      if (typeof syncAdminAuditLogs === "function") syncAdminAuditLogs();
+      if (typeof loadPaymentsFromServer === "function") loadPaymentsFromServer();
       showToast("Payment " + requestId + " rejected. Reason logged.");
     })
     .catch(function(err) {
@@ -592,7 +578,12 @@ function loadPaymentsFromServer() {
   if (state.adminSession && state.adminSession.authHeader) {
     headers["Authorization"] = state.adminSession.authHeader;
   } else {
-    url += "?userId=" + encodeURIComponent(state.currentUser.id);
+    var token = sessionStorage.getItem("ax_session_token") || localStorage.getItem("ax_session_token");
+    if (token) {
+      headers["Authorization"] = "Bearer " + token;
+    } else {
+      url += "?userId=" + encodeURIComponent(state.currentUser ? state.currentUser.id : "");
+    }
   }
 
   fetch(url, { headers: headers })

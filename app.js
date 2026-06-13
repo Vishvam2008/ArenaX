@@ -1,189 +1,145 @@
 const state = {
-  wallet: 420,
-  walletFrozen: false,
-  withdrawalsBlocked: false,
   game: "freefire",
   sortHighPrize: false,
   nextId: 10,
-  requests: [
-    { id: 1, type: "Withdrawal", user: "RogueRavi", amount: 250, status: "Pending admin review", reason: "UPI payout request" },
-    { id: 2, type: "Reward Approval", user: "NovaAditi", amount: 300, status: "Screenshot proof pending", reason: "Manual rank #2 reward" }
-  ],
-  ledger: [
-    { label: "Admin signup bonus", amount: 150, type: "credit", actor: "Admin", audit: "AUD-1001" },
-    { label: "Manual correction", amount: -30, type: "debit", actor: "Admin", audit: "AUD-1002" },
-    { label: "Approved result reward", amount: 300, type: "credit", actor: "Admin", audit: "AUD-1003" }
-  ],
-  audit: [
-    "AUD-1003 - Admin credited approved result reward to RogueRavi.",
-    "AUD-1002 - Admin deducted manual correction with reason.",
-    "AUD-1001 - Admin credited signup bonus."
-  ],
-  tournaments: [
-    {
-      id: 1,
-      game: "freefire",
-      title: "Free Fire Max Clash",
-      mode: "Squad",
-      map: "Bermuda",
-      time: "Today, 7:30 PM",
-      entry: 40,
-      prize: 8000,
-      playerLimit: 100,
-      teamLimit: 25,
-      registration: "Admin window",
-      slots: "71/100",
-      rewards: {
-        perKill: 5,
-        booyah: 50,
-        rank1: 500,
-        rank2: 300,
-        rank3: 200,
-        rank4to10: 75,
-        mvp: 100,
-        specialRewards: "Manual special rewards"
-      }
-    },
-    {
-      id: 2,
-      game: "freefire",
-      title: "Solo Headshot Rush",
-      mode: "Solo",
-      map: "Purgatory",
-      time: "Today, 9:00 PM",
-      entry: 20,
-      prize: 2500,
-      playerLimit: 48,
-      teamLimit: 48,
-      registration: "Admin window",
-      slots: "43/48",
-      rewards: {
-        perKill: 3,
-        booyah: 35,
-        rank1: 250,
-        rank2: 150,
-        rank3: 90,
-        rank4to10: 25,
-        mvp: 75,
-        specialRewards: "None"
-      }
-    },
-    {
-      id: 3,
-      game: "freefire",
-      title: "Grandmaster Squad Cup",
-      mode: "Squad",
-      map: "Kalahari",
-      time: "Tomorrow, 6:00 PM",
-      entry: 75,
-      prize: 15000,
-      playerLimit: 100,
-      teamLimit: 25,
-      registration: "Admin window",
-      slots: "28/100",
-      rewards: {
-        perKill: 8,
-        booyah: 100,
-        rank1: 1200,
-        rank2: 800,
-        rank3: 500,
-        rank4to10: 150,
-        mvp: 300,
-        specialRewards: "Clutch bonus reviewed manually"
-      }
-    },
-    {
-      id: 4,
-      game: "bgmi",
-      title: "BGMI Early Access Scrim",
-      mode: "Squad",
-      map: "Erangel",
-      time: "Waitlist",
-      entry: 0,
-      prize: 0,
-      playerLimit: 100,
-      teamLimit: 25,
-      registration: "Future support",
-      slots: "Beta",
-      rewards: {
-        perKill: 0,
-        booyah: 0,
-        rank1: 0,
-        rank2: 0,
-        rank3: 0,
-        rank4to10: 0,
-        mvp: 0,
-        specialRewards: "BGMI rewards not live"
-      }
-    }
-  ],
+  requests: [],
+  ledger: [],
+  audit: [],
+  users: [],
+  wallets: {},
+  currentUser: null,
+  tournaments: [],
   leaders: [
     { name: "RogueRavi", mode: "Solo", kills: 86, wins: 14, points: 1840 },
     { name: "NovaAditi", mode: "Squad", kills: 74, wins: 12, points: 1725 },
     { name: "BlazeX", mode: "Solo", kills: 69, wins: 10, points: 1604 },
     { name: "Team Vortex", mode: "Squad", kills: 122, wins: 9, points: 1550 },
     { name: "KiraOP", mode: "Solo", kills: 58, wins: 8, points: 1408 }
-  ]
+  ],
+  _walletBalance: 0,
+  _walletFrozen: false,
+  _withdrawalsBlocked: false
 };
 
-function saveStateToLocalStorage() {
-  try {
-    var toSave = {
-      wallet: state.wallet,
-      walletFrozen: state.walletFrozen,
-      withdrawalsBlocked: state.withdrawalsBlocked,
-      nextId: state.nextId,
-      requests: state.requests,
-      ledger: state.ledger,
-      audit: state.audit,
-      tournaments: state.tournaments,
-      leaders: state.leaders,
-      paymentNextId: state.paymentNextId,
-      qrConfig: state.qrConfig,
-      usedUTRs: state.usedUTRs,
-      screenshotHashes: state.screenshotHashes,
-      paymentRequests: state.paymentRequests,
-      playerProfiles: state.playerProfiles,
-      recentWinners: state.recentWinners,
-      tournamentNextId: state.tournamentNextId
-    };
-    localStorage.setItem("ax_state", JSON.stringify(toSave));
-  } catch (e) {
-    console.error("Failed to save state:", e);
+// API Server Root Configuration
+const API_BASE = "http://localhost:4400";
+
+function apiFetch(url, options = {}) {
+  const token = sessionStorage.getItem("ax_session_token") || localStorage.getItem("ax_session_token");
+  const headers = {
+    'Content-Type': 'application/json',
+    ...(options.headers || {})
+  };
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
   }
+  
+  const fetchUrl = url.startsWith('http') ? url : `${API_BASE}${url}`;
+  return fetch(fetchUrl, { ...options, headers }).then(async (res) => {
+    if (res.status === 401 && !url.includes('/api/auth/login')) {
+      sessionStorage.removeItem("ax_session_token");
+      localStorage.removeItem("ax_session_token");
+      state.currentUser = null;
+      if (typeof updatePlayerContext === "function") updatePlayerContext();
+      if (typeof updateAuthOverlayVisibility === "function") updateAuthOverlayVisibility();
+    }
+    const contentType = res.headers.get('content-type');
+    if (contentType && contentType.includes('application/json')) {
+      const payload = await res.json();
+      if (!res.ok) throw new Error(payload.error || `Server error (${res.status})`);
+      return payload;
+    }
+    if (!res.ok) throw new Error(`Server error (${res.status})`);
+    return res;
+  });
+}
+
+async function loadStateFromServer() {
+  try {
+    const res = await apiFetch("/api/tournaments");
+    if (res.success && res.tournaments) {
+      state.tournaments = res.tournaments;
+    }
+  } catch (err) {
+    console.warn("Failed to load tournaments from database:", err.message);
+  }
+
+  try {
+    const res = await apiFetch("/api/apk/version");
+    if (res.success && res.apk) {
+      const chip = document.querySelector(".version-chip");
+      if (chip) chip.textContent = res.apk.version;
+      const downloadBtn = document.getElementById("downloadButton");
+      if (downloadBtn) {
+        const sizeSpan = document.querySelector(".download-meta span:first-child");
+        if (sizeSpan) sizeSpan.textContent = res.apk.file_size;
+        const osSpan = document.querySelector(".download-meta span:nth-child(2)");
+        if (osSpan) osSpan.textContent = res.apk.android_version;
+        downloadBtn.onclick = function() {
+          if (res.apk.download_url && res.apk.download_url !== "#") {
+            window.open(res.apk.download_url, "_blank");
+          } else {
+            showToast("APK download URL is currently unconfigured.");
+          }
+        };
+      }
+    }
+  } catch (err) {
+    console.warn("Failed to load APK version from database:", err.message);
+  }
+  
+  if (typeof renderTournaments === "function") renderTournaments();
+}
+
+function saveStateToLocalStorage() {
+  // Database is now the source of truth; local saving is disabled
+}
+
+async function hashPassword(password) {
+  // Passwords are securely hashed with bcrypt on the server side
+  return password;
 }
 
 function loadStateFromLocalStorage() {
-  try {
-    var raw = localStorage.getItem("ax_state");
-    if (!raw) return;
-    var loaded = JSON.parse(raw);
-    if (!loaded) return;
-    
-    if (loaded.wallet !== undefined) state.wallet = loaded.wallet;
-    if (loaded.walletFrozen !== undefined) state.walletFrozen = loaded.walletFrozen;
-    if (loaded.withdrawalsBlocked !== undefined) state.withdrawalsBlocked = loaded.withdrawalsBlocked;
-    if (loaded.nextId !== undefined) state.nextId = loaded.nextId;
-    if (loaded.requests !== undefined) state.requests = loaded.requests;
-    if (loaded.ledger !== undefined) state.ledger = loaded.ledger;
-    if (loaded.audit !== undefined) state.audit = loaded.audit;
-    if (loaded.tournaments !== undefined) state.tournaments = loaded.tournaments;
-    if (loaded.leaders !== undefined) state.leaders = loaded.leaders;
-    if (loaded.paymentNextId !== undefined) state.paymentNextId = loaded.paymentNextId;
-    if (loaded.qrConfig !== undefined) state.qrConfig = loaded.qrConfig;
-    if (loaded.usedUTRs !== undefined) state.usedUTRs = loaded.usedUTRs;
-    if (loaded.screenshotHashes !== undefined) state.screenshotHashes = loaded.screenshotHashes;
-    if (loaded.paymentRequests !== undefined) state.paymentRequests = loaded.paymentRequests;
-    if (loaded.playerProfiles !== undefined) state.playerProfiles = loaded.playerProfiles;
-    if (loaded.recentWinners !== undefined) state.recentWinners = loaded.recentWinners;
-    if (loaded.tournamentNextId !== undefined) state.tournamentNextId = loaded.tournamentNextId;
-  } catch (e) {
-    console.error("Failed to load state:", e);
-  }
+  // Database is now the source of truth, loading from localStorage is disabled
 }
 
-// Restore state from localStorage immediately on script load
-loadStateFromLocalStorage();
+// Define ES5 getters/setters mapping to API cache values
+Object.defineProperty(state, 'wallet', {
+  get: function() {
+    return state._walletBalance;
+  },
+  set: function(val) {
+    state._walletBalance = Number(val);
+  },
+  configurable: true,
+  enumerable: true
+});
+
+Object.defineProperty(state, 'walletFrozen', {
+  get: function() {
+    return state._walletFrozen;
+  },
+  set: function(val) {
+    state._walletFrozen = !!val;
+  },
+  configurable: true,
+  enumerable: true
+});
+
+Object.defineProperty(state, 'withdrawalsBlocked', {
+  get: function() {
+    return state._withdrawalsBlocked;
+  },
+  set: function(val) {
+    state._withdrawalsBlocked = !!val;
+  },
+  configurable: true,
+  enumerable: true
+});
+
+// Restore session from API immediately on script load
+loadStateFromServer();
 
 const refs = {
   walletMini: document.querySelector("#walletMini"),
@@ -252,31 +208,45 @@ function audit(message) {
   return id;
 }
 
-function addLedger(label, amount, type, actor, auditId) {
-  state.ledger.unshift({ label, amount, type, actor, audit: auditId });
+function addLedger(label, amount, type, actor, auditId, targetUserId = null) {
+  var uId = targetUserId || (state.currentUser ? state.currentUser.id : "USR102");
+  state.ledger.unshift({ userId: uId, label, amount, type, actor, audit: auditId });
   renderLedger();
   saveStateToLocalStorage();
 }
 
-function addRequest(type, amount, reason, user = "RogueRavi") {
+function addRequest(type, amount, reason, user = null) {
+  var uName = user || (state.currentUser ? state.currentUser.name : "RogueRavi");
+  var uId = state.currentUser ? state.currentUser.id : "USR102";
+  
+  if (user) {
+    var found = state.users.find(u => u.username === user || u.id === user || (u.freeFireUid && u.freeFireUid === user));
+    if (found) {
+      uId = found.id;
+      uName = found.username;
+    }
+  }
+
   const request = {
     id: state.nextId++,
     type,
-    user,
+    userId: uId,
+    user: uName,
     amount,
     status: "Pending admin review",
     reason
   };
   state.requests.unshift(request);
-  audit(`${type} request created for ${user}; no balance change performed.`);
+  audit(`${type} request created for ${uName}; no balance change performed.`);
   renderRequests();
   saveStateToLocalStorage();
   return request;
 }
 
 function updateWallet() {
-  refs.walletMini.textContent = money(state.wallet);
-  refs.walletBalance.textContent = money(state.wallet);
+  var bal = state.currentUser ? state.wallet : 0;
+  refs.walletMini.textContent = money(bal);
+  refs.walletBalance.textContent = money(bal);
 }
 
 function rewardSummary(rewards) {
@@ -342,7 +312,14 @@ function renderTournaments() {
 }
 
 function renderLedger() {
-  refs.ledger.innerHTML = state.ledger.map((row) => `
+  if (!state.currentUser) {
+    refs.ledger.innerHTML = '<div class="empty-state"><span>Log in to view transactions</span></div>';
+    return;
+  }
+  var filtered = state.ledger.filter(function(row) {
+    return row.userId === state.currentUser.id;
+  });
+  refs.ledger.innerHTML = filtered.map((row) => `
     <div class="ledger-row">
       <div>
           <strong>${escapeHTML(row.label)}</strong>
@@ -350,11 +327,19 @@ function renderLedger() {
       </div>
       <strong>${row.amount > 0 ? "+" : "-"}${rupees(Math.abs(row.amount))}</strong>
     </div>
-  `).join("");
+  `).join("") || '<div class="empty-state"><span>No transactions yet</span></div>';
 }
 
 function renderRequests() {
-  const walletMarkup = state.requests.map((request) => `
+  if (!state.currentUser) {
+    refs.walletRequests.innerHTML = '<div class="empty-state"><span>Log in to view requests</span></div>';
+    return;
+  }
+  var userRequests = state.requests.filter(function(r) {
+    return r.userId === state.currentUser.id;
+  });
+
+  const walletMarkup = userRequests.map((request) => `
     <div class="request-row">
       <div>
         <strong>${escapeHTML(request.type)}</strong>
@@ -411,32 +396,78 @@ function renderLeaderboard() {
   `).join("");
 }
 
-function applyAdminCredit(label, amount, actorMessage) {
+function applyAdminCredit(label, amount, actorMessage, targetUserId = null) {
   if (!state.adminAuthenticated || !state.adminSession) {
     showToast("Unauthorized balance modification.");
     return;
   }
-  state.wallet += amount;
-  updateWallet();
-  const auditId = audit(actorMessage);
-  addLedger(label, amount, "credit", "Admin", auditId);
-  saveStateToLocalStorage();
+  var uId = targetUserId || (state.currentUser ? state.currentUser.id : null);
+  if (!uId) {
+    showToast("No target user selected for credit.");
+    return;
+  }
+  fetch("http://localhost:4400/api/admin/credit", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": state.adminSession.authHeader
+    },
+    body: JSON.stringify({
+      userId: uId,
+      amount: amount,
+      label: actorMessage || label
+    })
+  })
+  .then(function(res) { return res.json(); })
+  .then(function(res) {
+    if (res.success) {
+      showToast("Wallet credited successfully.");
+      if (typeof syncAdminUsers === "function") syncAdminUsers();
+      if (typeof updatePlayerContext === "function") updatePlayerContext();
+    } else {
+      showToast("Credit failed: " + res.error);
+    }
+  })
+  .catch(function(err) {
+    showToast("Server connection error: " + err.message);
+  });
 }
 
-function applyAdminDebit(label, amount, actorMessage) {
+function applyAdminDebit(label, amount, actorMessage, targetUserId = null) {
   if (!state.adminAuthenticated || !state.adminSession) {
     showToast("Unauthorized balance modification.");
     return false;
   }
-  if (amount > state.wallet) {
-    showToast("Admin debit blocked: insufficient wallet balance.");
+  var uId = targetUserId || (state.currentUser ? state.currentUser.id : null);
+  if (!uId) {
+    showToast("No target user selected for debit.");
     return false;
   }
-  state.wallet -= amount;
-  updateWallet();
-  const auditId = audit(actorMessage);
-  addLedger(label, -amount, "debit", "Admin", auditId);
-  saveStateToLocalStorage();
+  fetch("http://localhost:4400/api/admin/debit", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": state.adminSession.authHeader
+    },
+    body: JSON.stringify({
+      userId: uId,
+      amount: amount,
+      label: actorMessage || label
+    })
+  })
+  .then(function(res) { return res.json(); })
+  .then(function(res) {
+    if (res.success) {
+      showToast("Wallet debited successfully.");
+      if (typeof syncAdminUsers === "function") syncAdminUsers();
+      if (typeof updatePlayerContext === "function") updatePlayerContext();
+    } else {
+      showToast("Debit failed: " + res.error);
+    }
+  })
+  .catch(function(err) {
+    showToast("Server connection error: " + err.message);
+  });
   return true;
 }
 
@@ -449,45 +480,27 @@ function approveRequest(id) {
   if (!request) return;
 
   if (request.type === "Deposit") {
-    applyAdminCredit("Approved deposit", request.amount, `Admin approved deposit for ${request.user}.`);
+    if (typeof approvePayment === "function") {
+      approvePayment(id);
+    }
   } else if (request.type === "Withdrawal") {
-    if (state.withdrawalsBlocked || state.walletFrozen) {
-      showToast("Withdrawal approval blocked by wallet controls.");
-      return;
-    }
-    if (!applyAdminDebit("Approved withdrawal", request.amount, `Admin approved withdrawal for ${request.user}.`)) return;
-  } else if (request.type === "Tournament Entry") {
-    if (state.walletFrozen) {
-      showToast("Entry approval blocked: wallet is frozen.");
-      return;
-    }
-    if (!applyAdminDebit("Approved tournament entry", request.amount, `Admin approved tournament entry for ${request.user}.`)) return;
-
-    // Automatically approve the participant in the tournament
-    if (request.tournamentId && request.userId) {
-      var t = state.tournaments.find(function(x) { return x.id === request.tournamentId; });
-      if (t) {
-        var p = t.participants.find(function(x) { return x.userId === request.userId; });
-        if (p) {
-          p.status = "approved";
-          t.filledSlots = t.participants.filter(function(x) { return x.status === "approved"; }).length;
-          audit("Auto-approved participant " + p.userName + " for " + t.title + " on wallet request approval.");
-          if (typeof renderAdminTournaments === "function") renderAdminTournaments();
-          if (typeof renderTournaments === "function") renderTournaments();
-        }
+    showToast("Processing withdrawal approval...");
+    adminApiFetch("/api/admin/requests/action", {
+      method: "POST",
+      body: { withdrawalId: id, action: "approve", notes: "Approved by Admin" }
+    })
+    .then(function(res) {
+      if (res.success) {
+        showToast("Withdrawal approved successfully.");
+        if (typeof syncAdminRequests === "function") syncAdminRequests();
+        if (typeof syncAdminUsers === "function") syncAdminUsers();
+        if (typeof syncAdminAuditLogs === "function") syncAdminAuditLogs();
       }
-    }
-  } else if (request.type === "Reward Approval") {
-    applyAdminCredit("Approved winnings", request.amount, `Admin approved final winnings for ${request.user} after result verification.`);
-  } else if (request.type === "Refund") {
-    applyAdminCredit("Approved refund", request.amount, `Admin approved refund for ${request.user}.`);
+    })
+    .catch(function(err) {
+      showToast("Approval failed: " + err.message);
+    });
   }
-
-  request.status = "Approved";
-  state.requests = state.requests.filter((item) => item.id !== id);
-  renderRequests();
-  saveStateToLocalStorage();
-  showToast(`${request.type} approved with audit trail.`);
 }
 
 function rejectRequest(id) {
@@ -497,12 +510,31 @@ function rejectRequest(id) {
   }
   const request = state.requests.find((item) => item.id === id);
   if (!request) return;
-  request.status = "Rejected";
-  audit(`Admin rejected ${request.type} for ${request.user}; no balance change performed.`);
-  state.requests = state.requests.filter((item) => item.id !== id);
-  renderRequests();
-  saveStateToLocalStorage();
-  showToast(`${request.type} rejected and logged.`);
+
+  if (request.type === "Deposit") {
+    if (typeof rejectPayment === "function") {
+      rejectPayment(id);
+    }
+  } else if (request.type === "Withdrawal") {
+    var reason = prompt("Enter rejection reason:");
+    if (reason === null) return;
+    showToast("Processing withdrawal rejection...");
+    adminApiFetch("/api/admin/requests/action", {
+      method: "POST",
+      body: { withdrawalId: id, action: "reject", notes: reason || "Rejected by Admin" }
+    })
+    .then(function(res) {
+      if (res.success) {
+        showToast("Withdrawal rejected successfully.");
+        if (typeof syncAdminRequests === "function") syncAdminRequests();
+        if (typeof syncAdminUsers === "function") syncAdminUsers();
+        if (typeof syncAdminAuditLogs === "function") syncAdminAuditLogs();
+      }
+    })
+    .catch(function(err) {
+      showToast("Rejection failed: " + err.message);
+    });
+  }
 }
 
 document.addEventListener("click", (event) => {
@@ -572,6 +604,46 @@ refs.search.addEventListener("input", renderTournaments);
         showToast("Minimum deposit request is \u20b910.");
         return;
       }
+     function loadStateFromLocalStorage() {
+  // Database is now the source of truth
+}
+
+// Restore state from database immediately on script load
+loadStateFromServer();
+
+// Define ES5 getters/setters for active user wallet mapping to API cache values
+Object.defineProperty(state, 'wallet', {
+  get: function() {
+    return state._walletBalance;
+  },
+  set: function(val) {
+    state._walletBalance = Number(val);
+  },
+  configurable: true,
+  enumerable: true
+});
+
+Object.defineProperty(state, 'walletFrozen', {
+  get: function() {
+    return state._walletFrozen;
+  },
+  set: function(val) {
+    state._walletFrozen = !!val;
+  },
+  configurable: true,
+  enumerable: true
+});
+
+Object.defineProperty(state, 'withdrawalsBlocked', {
+  get: function() {
+    return state._withdrawalsBlocked;
+  },
+  set: function(val) {
+    state._withdrawalsBlocked = !!val;
+  },
+  configurable: true,
+  enumerable: true
+});
       addRequest("Deposit", amount, "User deposit request");
       showToast("Deposit request submitted. Balance will change only after admin approval.");
     });
@@ -652,25 +724,52 @@ refs.search.addEventListener("input", renderTournaments);
       const amount = Number(form.get("amount")) || 0;
       const reason = form.get("reason");
 
-      if (action === "credit" || action === "bonus" || action === "correction") {
-        applyAdminCredit(`Admin ${action}`, amount, `Admin credited ${user}: ${reason}.`);
-      } else if (action === "debit") {
-        applyAdminDebit("Admin deduction", amount, `Admin deducted from ${user}: ${reason}.`);
-      } else if (action === "freeze") {
-        state.walletFrozen = true;
-        audit(`Admin froze wallet for ${user}: ${reason}.`);
-      } else if (action === "unfreeze") {
-        state.walletFrozen = false;
-        audit(`Admin unfroze wallet for ${user}: ${reason}.`);
-      } else if (action === "block-withdrawals") {
-        state.withdrawalsBlocked = true;
-        audit(`Admin blocked withdrawals for ${user}: ${reason}.`);
-      } else if (action === "unblock-withdrawals") {
-        state.withdrawalsBlocked = false;
-        audit(`Admin unblocked withdrawals for ${user}: ${reason}.`);
+      function findUserByInput(inputVal) {
+        if (!inputVal) return null;
+        var val = inputVal.trim().toLowerCase();
+        return state.users.find(function(u) {
+          return u.id.toLowerCase() === val || u.username.toLowerCase() === val || (u.freeFireUid && u.freeFireUid.toLowerCase() === val);
+        });
       }
 
+      var targetUser = findUserByInput(user);
+      if (!targetUser) {
+        showToast("User not found: " + user);
+        return;
+      }
+      var targetId = targetUser.id;
+
+      if (action === "credit" || action === "bonus" || action === "correction") {
+        applyAdminCredit(`Admin ${action}`, amount, `Admin credited ${targetUser.username}: ${reason}.`, targetId);
+      } else if (action === "debit") {
+        applyAdminDebit("Admin deduction", amount, `Admin deducted from ${targetUser.username}: ${reason}.`, targetId);
+      } else if (action === "freeze") {
+        if (typeof adminApiFetch === "function") {
+          adminApiFetch("/api/admin/users/status", { method: "POST", body: { userId: targetId, frozen: true } })
+            .then(res => { showToast(`Wallet frozen for ${targetUser.username}`); if (typeof syncAdminUsers === "function") syncAdminUsers(); })
+            .catch(err => showToast(err.message));
+        }
+      } else if (action === "unfreeze") {
+        if (typeof adminApiFetch === "function") {
+          adminApiFetch("/api/admin/users/status", { method: "POST", body: { userId: targetId, frozen: false } })
+            .then(res => { showToast(`Wallet unfrozen for ${targetUser.username}`); if (typeof syncAdminUsers === "function") syncAdminUsers(); })
+            .catch(err => showToast(err.message));
+        }
+      } else if (action === "block-withdrawals") {
+        if (typeof adminApiFetch === "function") {
+          adminApiFetch("/api/admin/users/status", { method: "POST", body: { userId: targetId, withdrawalsBlocked: true } })
+            .then(res => { showToast(`Withdrawals blocked for ${targetUser.username}`); if (typeof syncAdminUsers === "function") syncAdminUsers(); })
+            .catch(err => showToast(err.message));
+        }
+      } else if (action === "unblock-withdrawals" || action === "allow-withdrawals") {
+        if (typeof adminApiFetch === "function") {
+          adminApiFetch("/api/admin/users/status", { method: "POST", body: { userId: targetId, withdrawalsBlocked: false } })
+            .then(res => { showToast(`Withdrawals allowed for ${targetUser.username}`); if (typeof syncAdminUsers === "function") syncAdminUsers(); })
+            .catch(err => showToast(err.message));
+        }
+      }
       showToast("Wallet admin action completed with audit trail.");
+      event.currentTarget.reset();
     });
   }
 
@@ -695,7 +794,8 @@ refs.search.addEventListener("input", renderTournaments);
       event.preventDefault();
       const form = new FormData(event.currentTarget);
       const amount = Number(form.get("amount"));
-      addRequest("Refund", amount, `${form.get("refundType")}: ${form.get("reason")}`);
+      const userVal = form.get("refundUser");
+      addRequest("Refund", amount, `${form.get("refundType")}: ${form.get("reason")}`, userVal);
       showToast("Refund request queued. Credit occurs only after admin approval.");
       event.currentTarget.reset();
     });
@@ -715,9 +815,440 @@ document.querySelector("#themeToggle").addEventListener("click", () => {
 document.querySelector("#soloToggle").addEventListener("change", renderLeaderboard);
 document.querySelector("#squadToggle").addEventListener("change", renderLeaderboard);
 
+// =============================================================
+// PLAYER AUTHENTICATION SYSTEM CONTROLLERS
+// =============================================================
+
+function switchAuthTab(tab) {
+  var loginForm = document.getElementById("playerLoginForm");
+  var registerForm = document.getElementById("playerRegisterForm");
+  var resetForm = document.getElementById("playerResetForm");
+  var forceForm = document.getElementById("playerForceResetForm");
+  
+  var tabLogin = document.getElementById("authTabLogin");
+  var tabRegister = document.getElementById("authTabRegister");
+  var tabReset = document.getElementById("authTabReset");
+
+  loginForm.style.display = tab === 'login' ? 'block' : 'none';
+  registerForm.style.display = tab === 'register' ? 'block' : 'none';
+  resetForm.style.display = tab === 'reset' ? 'block' : 'none';
+  forceForm.style.display = 'none';
+
+  tabLogin.style.display = 'block';
+  tabRegister.style.display = 'block';
+  tabReset.style.display = 'block';
+
+  tabLogin.classList.toggle("active", tab === 'login');
+  tabRegister.classList.toggle("active", tab === 'register');
+  tabReset.classList.toggle("active", tab === 'reset');
+
+  document.getElementById("loginError").classList.remove("show");
+  document.getElementById("registerError").classList.remove("show");
+  document.getElementById("resetError").classList.remove("show");
+  document.getElementById("resetSuccess").classList.remove("show");
+  document.getElementById("forceResetError").classList.remove("show");
+
+  document.getElementById("resetStep1").style.display = 'block';
+  document.getElementById("resetStep2").style.display = 'none';
+}
+
+async function handlePlayerLogin(e) {
+  if (e) e.preventDefault();
+  var u = (document.getElementById("loginUsername").value || "").trim();
+  var p = document.getElementById("loginPassword").value || "";
+  var remember = document.getElementById("loginRememberMe").checked;
+  var errDiv = document.getElementById("loginError");
+
+  errDiv.classList.remove("show");
+
+  try {
+    const res = await apiFetch("/api/auth/login", {
+      method: "POST",
+      body: JSON.stringify({ username: u, password: p })
+    });
+
+    if (res.success && res.sessionToken) {
+      if (remember) {
+        localStorage.setItem("ax_session_token", res.sessionToken);
+      } else {
+        localStorage.removeItem("ax_session_token");
+      }
+      sessionStorage.setItem("ax_session_token", res.sessionToken);
+
+      if (res.user.forcePasswordReset) {
+        state.pendingResetUser = res.user;
+        
+        document.getElementById("playerLoginForm").style.display = 'none';
+        document.getElementById("playerRegisterForm").style.display = 'none';
+        document.getElementById("playerResetForm").style.display = 'none';
+        
+        document.getElementById("authTabLogin").style.display = 'none';
+        document.getElementById("authTabRegister").style.display = 'none';
+        document.getElementById("authTabReset").style.display = 'none';
+        
+        var forceForm = document.getElementById("playerForceResetForm");
+        forceForm.style.display = 'block';
+        document.getElementById("forceNewPassword").value = "";
+        document.getElementById("forceConfirmPassword").value = "";
+        document.getElementById("forceResetError").classList.remove("show");
+        
+        showToast("Demo account detected. Password change required.");
+        return;
+      }
+
+      state.currentUser = res.user;
+      await updatePlayerContext();
+      document.getElementById("playerAuthOverlay").classList.remove("active");
+      showToast("Logged in as " + res.user.name + ".");
+    }
+  } catch (err) {
+    errDiv.textContent = err.message;
+    errDiv.classList.add("show");
+  }
+}
+
+async function handlePlayerForceReset(e) {
+  if (e) e.preventDefault();
+  var newP = document.getElementById("forceNewPassword").value || "";
+  var confP = document.getElementById("forceConfirmPassword").value || "";
+  var errDiv = document.getElementById("forceResetError");
+
+  errDiv.classList.remove("show");
+
+  if (!state.pendingResetUser) {
+    errDiv.textContent = "No user session selected.";
+    errDiv.classList.add("show");
+    return;
+  }
+  if (newP.length < 8) {
+    errDiv.textContent = "Password must be at least 8 characters long.";
+    errDiv.classList.add("show");
+    return;
+  }
+  if (newP !== confP) {
+    errDiv.textContent = "Passwords do not match.";
+    errDiv.classList.add("show");
+    return;
+  }
+
+  try {
+    const res = await apiFetch("/api/auth/reset-password", {
+      method: "POST",
+      body: JSON.stringify({
+        username: state.pendingResetUser.name,
+        email: state.pendingResetUser.email,
+        token: state.pendingResetUser.resetToken || "MIGRATED", // Handled transparently by reset API
+        newPassword: newP
+      })
+    });
+
+    if (res.success) {
+      state.pendingResetUser = null;
+      showToast("Password reset successfully. Please login.");
+      
+      document.getElementById("playerForceResetForm").style.display = 'none';
+      document.getElementById("playerLoginForm").style.display = 'block';
+      document.getElementById("authTabLogin").style.display = 'block';
+      document.getElementById("authTabRegister").style.display = 'block';
+      document.getElementById("authTabReset").style.display = 'block';
+      switchAuthTab('login');
+    }
+  } catch (err) {
+    errDiv.textContent = err.message;
+    errDiv.classList.add("show");
+  }
+}
+
+async function requestResetToken() {
+  var u = (document.getElementById("resetUsername").value || "").trim();
+  var email = (document.getElementById("resetEmail").value || "").trim();
+  var errDiv = document.getElementById("resetError");
+
+  errDiv.classList.remove("show");
+
+  try {
+    const res = await apiFetch("/api/auth/reset-token", {
+      method: "POST",
+      body: JSON.stringify({ username: u, email: email })
+    });
+
+    if (res.success) {
+      var form = document.getElementById("playerResetForm");
+      form.dataset.resetUsername = u;
+      form.dataset.resetEmail = email;
+
+      document.getElementById("resetStep1").style.display = 'none';
+      document.getElementById("resetStep2").style.display = 'block';
+      
+      if (res.token) {
+        document.getElementById("resetTokenNotification").innerHTML = "Verification code generated! <br/><strong>Token: " + res.token + "</strong> (Expires in 5 mins)";
+      }
+      showToast("Reset token generated.");
+    }
+  } catch (err) {
+    errDiv.textContent = err.message;
+    errDiv.classList.add("show");
+  }
+}
+
+async function confirmPasswordReset() {
+  var tokenVal = (document.getElementById("resetTokenInput").value || "").trim();
+  var newP = document.getElementById("resetNewPassword").value || "";
+  var errDiv = document.getElementById("resetError");
+  var succDiv = document.getElementById("resetSuccess");
+  
+  var form = document.getElementById("playerResetForm");
+  var u = form.dataset.resetUsername;
+  var email = form.dataset.resetEmail;
+
+  errDiv.classList.remove("show");
+  succDiv.classList.remove("show");
+
+  try {
+    const res = await apiFetch("/api/auth/reset-password", {
+      method: "POST",
+      body: JSON.stringify({
+        username: u,
+        email: email,
+        token: tokenVal,
+        newPassword: newP
+      })
+    });
+
+    if (res.success) {
+      succDiv.textContent = "Password updated successfully! Logging you in...";
+      succDiv.classList.add("show");
+
+      setTimeout(async function() {
+        try {
+          const loginRes = await apiFetch("/api/auth/login", {
+            method: "POST",
+            body: JSON.stringify({ username: u, password: newP })
+          });
+          if (loginRes.success && loginRes.sessionToken) {
+            sessionStorage.setItem("ax_session_token", loginRes.sessionToken);
+            state.currentUser = loginRes.user;
+            await updatePlayerContext();
+            document.getElementById("playerAuthOverlay").classList.remove("active");
+            showToast("Password reset complete. Welcome back.");
+          }
+        } catch (e) {
+          switchAuthTab('login');
+        }
+      }, 1200);
+    }
+  } catch (err) {
+    errDiv.textContent = err.message;
+    errDiv.classList.add("show");
+  }
+}
+
+async function handlePlayerRegister(e) {
+  if (e) e.preventDefault();
+  var u = (document.getElementById("regUsername").value || "").trim();
+  var email = (document.getElementById("regEmail").value || "").trim();
+  var p = document.getElementById("regPassword").value || "";
+  var phone = (document.getElementById("regPhone").value || "").trim();
+  var ffUid = (document.getElementById("regFfUid").value || "").trim();
+  var ffUser = (document.getElementById("regFfUsername").value || "").trim();
+  var errDiv = document.getElementById("registerError");
+
+  errDiv.classList.remove("show");
+
+  if (u.length < 3) {
+    errDiv.textContent = "Username must be at least 3 characters long.";
+    errDiv.classList.add("show");
+    return;
+  }
+  if (p.length < 8) {
+    errDiv.textContent = "Password must be at least 8 characters long.";
+    errDiv.classList.add("show");
+    return;
+  }
+  if (!email.includes("@")) {
+    errDiv.textContent = "Please enter a valid email address.";
+    errDiv.classList.add("show");
+    return;
+  }
+  if (phone.length < 6) {
+    errDiv.textContent = "Please enter a valid phone number.";
+    errDiv.classList.add("show");
+    return;
+  }
+
+  try {
+    const res = await apiFetch("/api/auth/register", {
+      method: "POST",
+      body: JSON.stringify({
+        username: u,
+        email: email,
+        password: p,
+        phone: phone,
+        freeFireUid: ffUid,
+        freeFireUsername: ffUser
+      })
+    });
+
+    if (res.success) {
+      showToast("Account created successfully. Please login.");
+      switchAuthTab('login');
+      document.getElementById("loginUsername").value = u;
+      document.getElementById("loginPassword").focus();
+    }
+  } catch (err) {
+    errDiv.textContent = err.message;
+    errDiv.classList.add("show");
+  }
+}
+
+async function logoutPlayer() {
+  if (state.currentUser) {
+    try {
+      await apiFetch("/api/auth/logout", { method: "POST" });
+    } catch (e) {}
+  }
+  state.currentUser = null;
+  localStorage.removeItem("ax_session_token");
+  sessionStorage.removeItem("ax_session_token");
+  await updatePlayerContext();
+  updateAuthOverlayVisibility();
+  setView("tournaments");
+  showToast("Logged out successfully.");
+}
+
+async function updatePlayerContext() {
+  var topbarPill = document.querySelector(".profile-pill");
+  var topAvatar = document.querySelector(".avatar");
+  var card = document.getElementById("playerProfileCard");
+  
+  if (state.currentUser) {
+    var letter = state.currentUser.name.charAt(0).toUpperCase();
+    if (topAvatar) topAvatar.textContent = letter;
+    if (topbarPill) topbarPill.style.display = "flex";
+    if (card) {
+      card.style.display = "block";
+      document.getElementById("profileAvatar").textContent = letter;
+      document.getElementById("profileUsername").textContent = state.currentUser.name;
+      document.getElementById("profileEmail").textContent = state.currentUser.email;
+      document.getElementById("profilePhone").textContent = state.currentUser.phone;
+      document.getElementById("profileFfUid").textContent = state.currentUser.freeFireUid;
+      document.getElementById("profileFfUsername").textContent = state.currentUser.freeFireUsername;
+    }
+
+    try {
+      const res = await apiFetch("/api/auth/session");
+      if (res.success) {
+        state._walletBalance = Number(res.wallet);
+        state._walletFrozen = !!res.frozen;
+        state._withdrawalsBlocked = !!res.withdrawalsBlocked;
+      }
+    } catch (e) {}
+
+    try {
+      const res = await apiFetch("/api/wallet/history");
+      if (res.success && res.ledger) {
+        state.ledger = res.ledger;
+      }
+    } catch (e) {}
+
+    try {
+      const res = await apiFetch("/api/payments");
+      if (res.success && res.payments) {
+        state.paymentRequests = res.payments;
+        state.requests = res.payments
+          .filter(p => p.status === 'Pending Verification')
+          .map(p => ({
+            id: p.request_id,
+            type: 'Deposit',
+            userId: p.user_id,
+            user: p.username || state.currentUser.name,
+            amount: p.amount,
+            status: p.status,
+            reason: `UTR: ${p.utr_number}`
+          }));
+      }
+    } catch (e) {}
+
+    try {
+      const res = await apiFetch("/api/notifications");
+      if (res.success && res.notifications && res.notifications.length > 0) {
+        res.notifications.forEach(n => {
+          showToast(`🔔 ${n.title}: ${n.message}`);
+        });
+      }
+    } catch (e) {}
+
+  } else {
+    if (topbarPill) topbarPill.style.display = "none";
+    if (card) card.style.display = "none";
+  }
+
+  updateWallet();
+  renderLedger();
+  renderRequests();
+  if (typeof renderUserPayments === "function") renderUserPayments();
+  if (typeof renderTournaments === "function") renderTournaments();
+}
+
+function updateAuthOverlayVisibility() {
+  var hash = window.location.hash.replace("#", "").replace("/", "");
+  var overlay = document.getElementById("playerAuthOverlay");
+  if (!overlay) return;
+
+  if (state.currentUser || hash === "admin" || state.adminAuthenticated) {
+    overlay.classList.remove("active");
+  } else {
+    overlay.classList.add("active");
+    switchAuthTab('login');
+  }
+}
+
+async function restorePlayerSession() {
+  var token = sessionStorage.getItem("ax_session_token") || localStorage.getItem("ax_session_token");
+  if (token) {
+    try {
+      const res = await apiFetch("/api/auth/session");
+      if (res.success && res.user) {
+        state.currentUser = res.user;
+        await updatePlayerContext();
+      } else {
+        sessionStorage.removeItem("ax_session_token");
+        localStorage.removeItem("ax_session_token");
+      }
+    } catch (e) {
+      sessionStorage.removeItem("ax_session_token");
+      localStorage.removeItem("ax_session_token");
+    }
+  }
+  updateAuthOverlayVisibility();
+}
+
+// Immediately attempt session restore on run
+restorePlayerSession();
+
+window.addEventListener("hashchange", updateAuthOverlayVisibility);
+
+// Initial setup triggers
 updateWallet();
-renderTournaments();
+loadStateFromServer();
 renderLedger();
 renderRequests();
-renderAudit();
-renderLeaderboard();
+if (typeof renderLeaderboard === "function") renderLeaderboard();
+
+window.switchAuthTab = switchAuthTab;
+window.handlePlayerLogin = handlePlayerLogin;
+window.handlePlayerRegister = handlePlayerRegister;
+window.requestResetToken = requestResetToken;
+window.confirmPasswordReset = confirmPasswordReset;
+window.handlePlayerForceReset = handlePlayerForceReset;
+window.logoutPlayer = logoutPlayer;
+window.updatePlayerContext = updatePlayerContext;
+window.updateAuthOverlayVisibility = updateAuthOverlayVisibility;
+
+window.addEventListener("storage", function(e) {
+  if (e.key === "ax_session_token") {
+    restorePlayerSession();
+  }
+});
+
+

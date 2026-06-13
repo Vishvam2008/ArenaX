@@ -120,7 +120,17 @@ renderTournaments = function() {
     });
   }
   if (state.tournamentStatusFilter !== "all") {
-    items = items.filter(function(t) { return t.status === state.tournamentStatusFilter; });
+    if (state.tournamentStatusFilter === "my_tournaments") {
+      if (!state.currentUser) {
+        items = [];
+      } else {
+        items = items.filter(function(t) {
+          return t.participants && t.participants.some(function(p) { return p.userId === state.currentUser.id; });
+        });
+      }
+    } else {
+      items = items.filter(function(t) { return t.status === state.tournamentStatusFilter; });
+    }
   }
   if (state.sortHighPrize) items = items.slice().sort(function(a, b) { return b.prize - a.prize; });
 
@@ -339,117 +349,98 @@ function checkAdminGuard() {
 }
 
 // --------------- Participant Management ---------------
-function joinTournament(id) {
+async function joinTournament(id) {
   var t = state.tournaments.find(function(x) { return x.id === id; });
   if (!t) return;
   if (t.status !== "registration_open") { showToast("Registration is not open."); return; }
-  if (getRemainingSlots(t) <= 0) { showToast("Tournament is full."); return; }
-  if (t.participants.find(function(p) { return p.userId === state.currentUser.id; })) {
-    showToast("You have already requested to join this tournament."); return;
+  
+  showToast("Submitting entry request...");
+  try {
+    const res = await apiFetch("/api/tournaments/join", {
+      method: "POST",
+      body: JSON.stringify({ tournamentId: id })
+    });
+    if (res.success) {
+      showToast("Successfully joined " + t.title + "!");
+      if (typeof updatePlayerContext === "function") {
+        await updatePlayerContext();
+      }
+    }
+  } catch (err) {
+    showToast("Failed to join: " + err.message);
   }
-  // Check ban
-  var profile = state.playerProfiles[state.currentUser.id];
-  if (profile && profile.isBanned) { showToast("You are banned from tournaments."); return; }
-
-  var fee = t.entryFee || t.entry || 0;
-  t.participants.push({
-    userId: state.currentUser.id,
-    userName: state.currentUser.name,
-    joinedAt: new Date().toISOString(),
-    status: "pending",
-    refunded: false
-  });
-
-  var req = addRequest("Tournament Entry", fee, t.title + " entry approval | " + state.currentUser.name);
-  req.tournamentId = t.id;
-  req.userId = state.currentUser.id;
-
-  audit(state.currentUser.name + " requested to join " + t.title + ". Entry fee: " + rupees(fee) + ". Pending admin approval.");
-  renderTournaments();
-  if (state.activeTournamentView === id) renderTournamentDetail(t);
-  showToast("Entry request submitted for " + t.title + ". Awaiting admin approval.");
 }
 
 function approveParticipant(tournamentId, userId) {
   if (!checkAdminGuard()) return;
-  var t = state.tournaments.find(function(x) { return x.id === tournamentId; });
-  if (!t) return;
-  var p = t.participants.find(function(x) { return x.userId === userId; });
-  if (!p) return;
-
-  var fee = t.entryFee || t.entry || 0;
-
-  // Find pending wallet entry request and approve it
-  var req = state.requests.find(function(r) {
-    return r.type === "Tournament Entry" && r.tournamentId === tournamentId && r.userId === userId && r.status === "Pending admin review";
-  });
-
-  if (req) {
-    approveRequest(req.id);
-  } else {
-    if (fee > 0) {
-      if (state.walletFrozen) {
-        showToast("Entry approval blocked: wallet is frozen.");
-        return;
-      }
-      if (!applyAdminDebit("Approved tournament entry", fee, "Admin approved tournament entry for " + p.userName + " in " + t.title + ". Wallet debited " + rupees(fee) + ".")) {
-        return; // Insufficient balance
-      }
+  showToast("Approving participant...");
+  adminApiFetch("/api/admin/participants/action", {
+    method: "POST",
+    body: { tournamentId: tournamentId, userId: userId, action: "approve" }
+  })
+  .then(function(res) {
+    if (res.success) {
+      showToast("Participant approved.");
+      syncAdminTournaments();
     }
-    p.status = "approved";
-    t.filledSlots = t.participants.filter(function(x) { return x.status === "approved"; }).length;
-    audit("Admin approved participant " + p.userName + " for " + t.title + ".");
-  }
-
-  renderAdminTournaments();
-  renderTournaments();
-  if (typeof saveStateToLocalStorage === "function") saveStateToLocalStorage();
-  showToast(p.userName + " approved for " + t.title + ".");
+  })
+  .catch(function(err) {
+    showToast("Approval failed: " + err.message);
+  });
 }
 
 function removeParticipant(tournamentId, userId) {
   if (!checkAdminGuard()) return;
-  var t = state.tournaments.find(function(x) { return x.id === tournamentId; });
-  if (!t) return;
-  t.participants = t.participants.filter(function(x) { return x.userId !== userId; });
-  t.filledSlots = t.participants.filter(function(x) { return x.status === "approved"; }).length;
-  audit("Admin removed participant " + userId + " from " + t.title + ".");
-  renderAdminTournaments();
-  showToast("Participant removed.");
+  showToast("Removing participant...");
+  adminApiFetch("/api/admin/participants/action", {
+    method: "POST",
+    body: { tournamentId: tournamentId, userId: userId, action: "delete" }
+  })
+  .then(function(res) {
+    if (res.success) {
+      showToast("Participant removed.");
+      syncAdminTournaments();
+    }
+  })
+  .catch(function(err) {
+    showToast("Removal failed: " + err.message);
+  });
 }
 
 function refundParticipant(tournamentId, userId) {
   if (!checkAdminGuard()) return;
-  var t = state.tournaments.find(function(x) { return x.id === tournamentId; });
-  if (!t) return;
-  var p = t.participants.find(function(x) { return x.userId === userId; });
-  if (!p || p.refunded) return;
-  var fee = t.entryFee || t.entry || 0;
-  if (fee > 0) {
-    addRequest("Refund", fee, "Tournament refund for " + p.userName + " from " + t.title, p.userName);
-  }
-  p.refunded = true;
-  p.status = "refunded";
-  t.filledSlots = t.participants.filter(function(x) { return x.status === "approved"; }).length;
-  audit("Admin refunded " + p.userName + " from " + t.title + ". Amount: " + rupees(fee) + ".");
-  renderAdminTournaments();
-  showToast(p.userName + " refunded " + rupees(fee) + ".");
+  showToast("Refunding participant...");
+  adminApiFetch("/api/admin/participants/action", {
+    method: "POST",
+    body: { tournamentId: tournamentId, userId: userId, action: "refund" }
+  })
+  .then(function(res) {
+    if (res.success) {
+      showToast("Participant entry refunded.");
+      syncAdminTournaments();
+    }
+  })
+  .catch(function(err) {
+    showToast("Refund failed: " + err.message);
+  });
 }
 
 function disqualifyParticipant(tournamentId, userId) {
   if (!checkAdminGuard()) return;
-  var t = state.tournaments.find(function(x) { return x.id === tournamentId; });
-  if (!t) return;
-  var p = t.participants.find(function(x) { return x.userId === userId; });
-  if (!p) return;
-  p.status = "disqualified";
-  t.filledSlots = t.participants.filter(function(x) { return x.status === "approved"; }).length;
-  // Track fraud
-  if (!state.playerProfiles[userId]) state.playerProfiles[userId] = { totalTournaments: 0, totalWinnings: 0, totalWithdrawals: 0, rejectedResults: 0, fraudFlags: [], banHistory: [], isBanned: false };
-  state.playerProfiles[userId].fraudFlags.push("Disqualified from " + t.title + " on " + new Date().toISOString());
-  audit("Admin disqualified " + p.userName + " from " + t.title + ".");
-  renderAdminTournaments();
-  showToast(p.userName + " disqualified.");
+  showToast("Disqualifying participant...");
+  adminApiFetch("/api/admin/participants/action", {
+    method: "POST",
+    body: { tournamentId: tournamentId, userId: userId, action: "disqualify" }
+  })
+  .then(function(res) {
+    if (res.success) {
+      showToast("Participant disqualified.");
+      syncAdminTournaments();
+    }
+  })
+  .catch(function(err) {
+    showToast("Disqualification failed: " + err.message);
+  });
 }
 
 function exportParticipants(tournamentId) {
@@ -500,7 +491,7 @@ function playerCheckIn(tournamentId) {
 }
 
 // --------------- Result Verification ---------------
-function submitResult(tournamentId) {
+async function submitResult(tournamentId) {
   var t = state.tournaments.find(function(x) { return x.id === tournamentId; });
   if (!t) return;
   var fileInput = document.getElementById("resultScreenshot-" + tournamentId);
@@ -510,144 +501,171 @@ function submitResult(tournamentId) {
 
   if (!fileInput || !fileInput.files || !fileInput.files[0]) { showToast("Upload result screenshot."); return; }
 
+  var file = fileInput.files[0];
   var reader = new FileReader();
-  reader.onload = function(e) {
-    t.results.push({
-      participantId: state.currentUser.id,
-      userName: state.currentUser.name,
-      rank: rank, kills: kills, booyahClaimed: booyahClaimed,
-      proofScreenshot: e.target.result,
-      proofStatus: "pending",
-      rewardAmount: 0, rewardPaid: false,
-      submittedAt: new Date().toISOString()
-    });
-    audit(state.currentUser.name + " submitted result for " + t.title + ". Rank: " + rank + ", Kills: " + kills + ".");
-    showToast("Result submitted for verification.");
+  reader.onload = async function(e) {
+    showToast("Submitting match results...");
+    try {
+      const res = await apiFetch("/api/tournaments/result", {
+        method: "POST",
+        body: JSON.stringify({
+          tournamentId: tournamentId,
+          kills: kills,
+          rank: rank,
+          booyah: booyahClaimed,
+          screenshotFilename: state.currentUser.id + "_" + tournamentId + "_" + Date.now() + ".jpg",
+          screenshotData: e.target.result
+        })
+      });
+      if (res.success) {
+        showToast("Results submitted for verification.");
+        if (typeof updatePlayerContext === "function") {
+          await updatePlayerContext();
+        }
+      }
+    } catch (err) {
+      showToast("Failed to submit: " + err.message);
+    }
   };
-  reader.readAsDataURL(fileInput.files[0]);
+  reader.readAsDataURL(file);
 }
 
 function approveResult(tournamentId, participantId) {
   if (!checkAdminGuard()) return;
-  var t = state.tournaments.find(function(x) { return x.id === tournamentId; });
-  if (!t) return;
-  var result = t.results.find(function(r) { return r.participantId === participantId; });
-  if (!result) return;
-  result.proofStatus = "approved";
-  audit("Admin approved result for " + result.userName + " in " + t.title + ".");
-  renderAdminTournaments();
-  showToast("Result approved for " + result.userName + ".");
+  showToast("Approving result...");
+  adminApiFetch("/api/admin/tournaments/result/action", {
+    method: "POST",
+    body: { tournamentId: tournamentId, participantId: participantId, action: "approve" }
+  })
+  .then(function(res) {
+    if (res.success) {
+      showToast("Result approved.");
+      syncAdminTournaments();
+    }
+  })
+  .catch(function(err) {
+    showToast("Approval failed: " + err.message);
+  });
 }
 
 function rejectResult(tournamentId, participantId) {
   if (!checkAdminGuard()) return;
-  var t = state.tournaments.find(function(x) { return x.id === tournamentId; });
-  if (!t) return;
-  var result = t.results.find(function(r) { return r.participantId === participantId; });
-  if (!result) return;
-  result.proofStatus = "rejected";
-  // Track rejected results
-  if (!state.playerProfiles[participantId]) state.playerProfiles[participantId] = { totalTournaments: 0, totalWinnings: 0, totalWithdrawals: 0, rejectedResults: 0, fraudFlags: [], banHistory: [], isBanned: false };
-  state.playerProfiles[participantId].rejectedResults++;
-  audit("Admin rejected result for " + result.userName + " in " + t.title + ".");
-  renderAdminTournaments();
-  showToast("Result rejected for " + result.userName + ".");
+  showToast("Rejecting result...");
+  adminApiFetch("/api/admin/tournaments/result/action", {
+    method: "POST",
+    body: { tournamentId: tournamentId, participantId: participantId, action: "reject" }
+  })
+  .then(function(res) {
+    if (res.success) {
+      showToast("Result rejected.");
+      syncAdminTournaments();
+    }
+  })
+  .catch(function(err) {
+    showToast("Rejection failed: " + err.message);
+  });
 }
 
-// --------------- Prize Distribution ---------------
 function approveRewards(tournamentId) {
   if (!checkAdminGuard()) return;
-  var t = state.tournaments.find(function(x) { return x.id === tournamentId; });
-  if (!t) return;
-  if (t.status === "completed") {
-    showToast("Rewards have already been distributed for this tournament.");
-    return;
-  }
-  var approved = t.results.filter(function(r) { return r.proofStatus === "approved" && !r.rewardPaid; });
-  approved.forEach(function(r) {
-    var reward = 0;
-    // Calculate based on rank
-    var rankReward = t.rankRewards.find(function(rr) { return rr.rank === r.rank + "st" || rr.rank === r.rank + "nd" || rr.rank === r.rank + "rd" || rr.rank === r.rank + "th" || rr.rank === "1st" && r.rank === 1 || rr.rank === "2nd" && r.rank === 2 || rr.rank === "3rd" && r.rank === 3; });
-    if (r.rank === 1) reward += (t.rankRewards.find(function(rr) { return rr.rank === "1st"; }) || {}).amount || 0;
-    else if (r.rank === 2) reward += (t.rankRewards.find(function(rr) { return rr.rank === "2nd"; }) || {}).amount || 0;
-    else if (r.rank === 3) reward += (t.rankRewards.find(function(rr) { return rr.rank === "3rd"; }) || {}).amount || 0;
-    else if (r.rank >= 4 && r.rank <= 10) reward += (t.rankRewards.find(function(rr) { return rr.rank === "4th-10th"; }) || {}).amount || 0;
-    reward += r.kills * t.perKill;
-    if (r.booyahClaimed) reward += t.booyah;
-
-    r.rewardAmount = reward;
-    r.rewardPaid = true;
-
-    if (reward > 0) {
-      addRequest("Reward Approval", reward, "Tournament reward for " + r.userName + " in " + t.title + " | Rank " + r.rank + " | " + r.kills + " kills", r.userName);
-      audit("Reward " + rupees(reward) + " queued for " + r.userName + " from " + t.title + ".");
+  showToast("Distributing rewards...");
+  adminApiFetch("/api/admin/tournaments/rewards", {
+    method: "POST",
+    body: { tournamentId: tournamentId }
+  })
+  .then(function(res) {
+    if (res.success) {
+      showToast("Rewards distributed and tournament completed.");
+      syncAdminTournaments();
     }
-
-    // Update player profile
-    if (!state.playerProfiles[r.participantId]) state.playerProfiles[r.participantId] = { totalTournaments: 0, totalWinnings: 0, totalWithdrawals: 0, rejectedResults: 0, fraudFlags: [], banHistory: [], isBanned: false };
-    state.playerProfiles[r.participantId].totalWinnings += reward;
-    state.playerProfiles[r.participantId].totalTournaments++;
+  })
+  .catch(function(err) {
+    showToast("Rewards failed: " + err.message);
   });
-
-  t.status = "completed";
-  t.completedAt = new Date().toISOString();
-  audit("Admin approved all rewards for " + t.title + ". Tournament completed.");
-  renderAdminTournaments();
-  renderTournaments();
-  showToast("Rewards approved for " + t.title + ". Awaiting final admin payout approval.");
 }
 
-// --------------- Emergency Controls ---------------
 function pauseTournament(id) {
   if (!checkAdminGuard()) return;
   var t = state.tournaments.find(function(x) { return x.id === id; });
   if (!t) return;
-  t.paused = !t.paused;
-  t.status = t.paused ? "paused" : "registration_open";
-  audit("Admin " + (t.paused ? "paused" : "resumed") + " " + t.title + ".");
-  renderAdminTournaments();
-  renderTournaments();
-  showToast(t.title + (t.paused ? " paused." : " resumed."));
+  var newPaused = !t.paused;
+  var newStatus = newPaused ? "paused" : "registration_open";
+  adminApiFetch("/api/admin/tournaments/status", {
+    method: "POST",
+    body: { tournamentId: id, status: newStatus }
+  })
+  .then(function(res) {
+    if (res.success) {
+      showToast(t.title + (newPaused ? " paused." : " resumed."));
+      syncAdminTournaments();
+    }
+  })
+  .catch(function(err) {
+    showToast("Failed to pause/resume: " + err.message);
+  });
 }
 
 function cancelTournament(id) {
   if (!checkAdminGuard()) return;
-  var t = state.tournaments.find(function(x) { return x.id === id; });
-  if (!t) return;
-  t.status = "cancelled";
-  audit("Admin cancelled " + t.title + ".");
-  renderAdminTournaments();
-  renderTournaments();
-  showToast(t.title + " cancelled.");
+  adminApiFetch("/api/admin/tournaments/status", {
+    method: "POST",
+    body: { tournamentId: id, status: "cancelled" }
+  })
+  .then(function(res) {
+    if (res.success) {
+      showToast("Tournament cancelled.");
+      syncAdminTournaments();
+    }
+  })
+  .catch(function(err) {
+    showToast("Cancellation failed: " + err.message);
+  });
 }
 
 function refundAllPlayers(id) {
   if (!checkAdminGuard()) return;
   var t = state.tournaments.find(function(x) { return x.id === id; });
   if (!t) return;
-  var fee = t.entryFee || t.entry || 0;
-  t.participants.filter(function(p) { return p.status === "approved" && !p.refunded; }).forEach(function(p) {
-    if (fee > 0) addRequest("Refund", fee, "Bulk refund: " + t.title + " cancelled", p.userName);
-    p.refunded = true;
-    p.status = "refunded";
+  var approved = t.participants.filter(function(p) { return p.status === "approved" && !p.refunded; });
+  if (approved.length === 0) {
+    showToast("No players to refund.");
+    return;
+  }
+  showToast("Refunding " + approved.length + " players...");
+  var promises = approved.map(function(p) {
+    return adminApiFetch("/api/admin/participants/action", {
+      method: "POST",
+      body: { tournamentId: id, userId: p.userId, action: "refund" }
+    });
   });
-  t.filledSlots = 0;
-  audit("Admin refunded all players for " + t.title + ".");
-  renderAdminTournaments();
-  showToast("All players refunded for " + t.title + ".");
+  Promise.all(promises)
+  .then(function() {
+    showToast("All players refunded successfully.");
+    syncAdminTournaments();
+  })
+  .catch(function(err) {
+    showToast("Some refunds failed: " + err.message);
+    syncAdminTournaments();
+  });
 }
 
 function sendEmergencyAnnouncement(id) {
   if (!checkAdminGuard()) return;
-  var t = state.tournaments.find(function(x) { return x.id === id; });
-  if (!t) return;
-  var msg = prompt("Enter emergency announcement:");
+  var msg = prompt("Enter emergency announcement / notification message:");
   if (!msg) return;
-  t.emergencyAnnouncement = msg;
-  audit("Admin sent emergency announcement for " + t.title + ": " + msg);
-  renderAdminTournaments();
-  renderTournaments();
-  showToast("Emergency announcement sent.");
+  adminApiFetch("/api/admin/tournaments/status", {
+    method: "POST",
+    body: { tournamentId: id, announcement: msg }
+  })
+  .then(function(res) {
+    if (res.success) {
+      showToast("Notification sent to all participants.");
+      syncAdminTournaments();
+    }
+  })
+  .catch(function(err) {
+    showToast("Failed to send: " + err.message);
+  });
 }
 
 function changeRoomDetails(id) {
@@ -656,25 +674,37 @@ function changeRoomDetails(id) {
   if (!t) return;
   var newRoom = prompt("New Room ID:", t.roomId);
   var newPass = prompt("New Password:", t.roomPassword);
-  if (newRoom !== null) t.roomId = newRoom;
-  if (newPass !== null) t.roomPassword = newPass;
-  audit("Admin changed room details for " + t.title + ".");
-  renderAdminTournaments();
-  showToast("Room details updated.");
+  if (newRoom === null && newPass === null) return;
+  adminApiFetch("/api/admin/tournaments/status", {
+    method: "POST",
+    body: { tournamentId: id, roomId: newRoom !== null ? newRoom : t.roomId, roomPassword: newPass !== null ? newPass : t.roomPassword }
+  })
+  .then(function(res) {
+    if (res.success) {
+      showToast("Room details updated.");
+      syncAdminTournaments();
+    }
+  })
+  .catch(function(err) {
+    showToast("Failed to update room: " + err.message);
+  });
 }
 
-// --------------- Tournament Status Management ---------------
 function updateTournamentStatus(id, newStatus) {
   if (!checkAdminGuard()) return;
-  var t = state.tournaments.find(function(x) { return x.id === id; });
-  if (!t) return;
-  var old = t.status;
-  t.status = newStatus;
-  if (newStatus === "live") t.roomReleased = true;
-  audit("Admin changed " + t.title + " status: " + old + " \u2192 " + newStatus + ".");
-  renderAdminTournaments();
-  renderTournaments();
-  showToast(t.title + " status: " + getStatusConfig(newStatus).label);
+  adminApiFetch("/api/admin/tournaments/status", {
+    method: "POST",
+    body: { tournamentId: id, status: newStatus }
+  })
+  .then(function(res) {
+    if (res.success) {
+      showToast("Tournament status updated.");
+      syncAdminTournaments();
+    }
+  })
+  .catch(function(err) {
+    showToast("Status update failed: " + err.message);
+  });
 }
 
 // --------------- Player Risk & Fraud Tracking ---------------
@@ -696,11 +726,21 @@ function renderPlayerProfile(userId) {
 
 function banPlayer(userId) {
   if (!checkAdminGuard()) return;
-  if (!state.playerProfiles[userId]) state.playerProfiles[userId] = { totalTournaments: 0, totalWinnings: 0, totalWithdrawals: 0, rejectedResults: 0, fraudFlags: [], banHistory: [], isBanned: false };
-  state.playerProfiles[userId].isBanned = !state.playerProfiles[userId].isBanned;
-  state.playerProfiles[userId].banHistory.push((state.playerProfiles[userId].isBanned ? "Banned" : "Unbanned") + " on " + new Date().toISOString() + " by " + (state.adminSession?.username || "Admin"));
-  audit("Player " + userId + " " + (state.playerProfiles[userId].isBanned ? "banned" : "unbanned") + ".");
-  showToast("Player " + userId + " " + (state.playerProfiles[userId].isBanned ? "banned" : "unbanned") + ".");
+  var profile = state.playerProfiles[userId] || { isBanned: false };
+  var newBan = !profile.isBanned;
+  adminApiFetch("/api/admin/users/status", {
+    method: "POST",
+    body: { userId: userId, isBanned: newBan }
+  })
+  .then(function(res) {
+    if (res.success) {
+      showToast("Player " + userId + " " + (newBan ? "banned" : "unbanned") + ".");
+      syncAdminUsers();
+    }
+  })
+  .catch(function(err) {
+    showToast("Failed to ban/unban player: " + err.message);
+  });
 }
 
 // --------------- Tournament Analytics ---------------
@@ -822,7 +862,6 @@ function createEnhancedTournament() {
   var bannerInput = document.getElementById("tournamentBanner");
   var handleBanner = function(bannerData) {
     var t = {
-      id: state.tournamentNextId++,
       game: state.game,
       title: fd.get("tName"),
       description: fd.get("tDesc") || "",
@@ -879,13 +918,21 @@ function createEnhancedTournament() {
       paused: false
     };
 
-    state.tournaments.unshift(t);
-    audit("Admin created tournament: " + t.title + " | " + t.mode + " | Entry: " + rupees(t.entryFee) + " | Prize: " + rupees(t.prize));
-    renderTournaments();
-    renderAdminTournaments();
-    renderTournamentAnalytics();
-    form.reset();
-    showToast("Tournament '" + t.title + "' created.");
+    showToast("Creating tournament...");
+    adminApiFetch("/api/admin/tournaments", {
+      method: "POST",
+      body: t
+    })
+    .then(function(res) {
+      if (res.success) {
+        showToast("Tournament '" + t.title + "' created.");
+        form.reset();
+        syncAdminTournaments();
+      }
+    })
+    .catch(function(err) {
+      showToast("Failed to create tournament: " + err.message);
+    });
   };
 
   if (bannerInput && bannerInput.files && bannerInput.files[0]) {
@@ -964,23 +1011,40 @@ document.addEventListener("click", function(e) {
   var rl = e.target.closest("[data-release-room]");
   if (rl) {
     var tid = Number(rl.dataset.releaseRoom);
-    var tt = state.tournaments.find(function(x) { return x.id === tid; });
-    if (tt) { tt.roomReleased = true; audit("Admin released room for " + tt.title + "."); renderAdminTournaments(); showToast("Room released."); }
+    adminApiFetch("/api/admin/tournaments/status", {
+      method: "POST",
+      body: { tournamentId: tid, roomReleased: true }
+    })
+    .then(function(res) {
+      if (res.success) {
+        showToast("Room released.");
+        syncAdminTournaments();
+      }
+    })
+    .catch(function(err) {
+      showToast("Release failed: " + err.message);
+    });
     return;
   }
 
   var sv = e.target.closest("[data-save-room]");
   if (sv) {
     var tid2 = Number(sv.dataset.saveRoom);
-    var tt2 = state.tournaments.find(function(x) { return x.id === tid2; });
-    if (tt2) {
-      var ri = document.querySelector('[data-room-id="' + tid2 + '"]');
-      var rp2 = document.querySelector('[data-room-pass="' + tid2 + '"]');
-      if (ri) tt2.roomId = ri.value;
-      if (rp2) tt2.roomPassword = rp2.value;
-      audit("Admin saved room for " + tt2.title + ".");
-      showToast("Room saved.");
-    }
+    var ri = document.querySelector('[data-room-id="' + tid2 + '"]');
+    var rp2 = document.querySelector('[data-room-pass="' + tid2 + '"]');
+    adminApiFetch("/api/admin/tournaments/status", {
+      method: "POST",
+      body: { tournamentId: tid2, roomId: ri ? ri.value : "", roomPassword: rp2 ? rp2.value : "" }
+    })
+    .then(function(res) {
+      if (res.success) {
+        showToast("Room saved.");
+        syncAdminTournaments();
+      }
+    })
+    .catch(function(err) {
+      showToast("Save failed: " + err.message);
+    });
     return;
   }
 

@@ -1410,3 +1410,265 @@ body.light .control-form textarea {
     grid-template-columns: repeat(2, 1fr) !important;
   }
 }
+
+/* =============================================================
+   MULTI-USER PLATFORM STYLING
+   ============================================================= */
+
+/* ---------- Player Auth Overlay ---------- */
+.player-auth-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 999;
+  place-items: center;
+  background: rgba(8, 12, 16, 0.96);
+  backdrop-filter: blur(16px);
+  padding: 16px;
+}
+.player-auth-overlay.active {
+  display: grid;
+}
+.player-auth-card {
+  width: min(100%, 460px);
+  padding: 28px 24px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: rgba(20, 30, 38, 0.95);
+  backdrop-filter: blur(20px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
+  text-align: left;
+}
+.player-auth-card h2 {
+  margin-bottom: 4px;
+  font-size: 1.35rem;
+  text-align: center;
+  color: var(--text);
+}
+.player-auth-card p {
+  color: var(--muted);
+  font-size: var(--fs-small);
+  margin-bottom: 18px;
+  text-align: center;
+}
+.player-auth-card label {
+  display: grid;
+  gap: 5px;
+  margin-bottom: 12px;
+  color: var(--muted);
+  font-weight: 800;
+  font-size: var(--fs-small);
+}
+.player-auth-card input {
+  width: 100%;
+  min-height: 42px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #0f151a;
+  color: var(--text);
+  font-size: 0.95rem;
+}
+.player-auth-card input:focus {
+  border-color: var(--primary);
+  outline: none;
+}
+.auth-tabs {
+  display: flex;
+  margin-bottom: 18px;
+  border-bottom: 1px solid var(--line);
+  gap: 6px;
+}
+.auth-tab {
+  flex: 1;
+  padding: 10px 6px;
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  font-weight: 800;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all var(--t-fast);
+  text-align: center;
+  font-size: var(--fs-small);
+}
+.auth-tab.active {
+  color: var(--primary);
+  border-bottom-color: var(--primary);
+}
+.player-auth-error {
+  display: none;
+  margin-top: 14px;
+  padding: 10px;
+  border-radius: 6px;
+  background: rgba(255, 107, 95, 0.12);
+  border: 1px solid rgba(255, 107, 95, 0.3);
+  color: var(--danger);
+  font-size: var(--fs-small);
+  font-weight: 700;
+  text-align: center;
+}
+.player-auth-error.show {
+  display: block;
+}
+.player-auth-success {
+  display: none;
+  margin-top: 14px;
+  padding: 10px;
+  border-radius: 6px;
+  background: rgba(50, 213, 131, 0.12);
+  border: 1px solid rgba(50, 213, 131, 0.3);
+  color: var(--primary);
+  font-size: var(--fs-small);
+  font-weight: 700;
+  text-align: center;
+}
+.player-auth-success.show {
+  display: block;
+}
+
+/* ---------- Player Profile Card ---------- */
+.player-profile-card {
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: rgba(20, 30, 38, 0.45);
+  backdrop-filter: blur(10px);
+  margin-bottom: 24px;
+}
+.profile-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 14px;
+  margin-bottom: 14px;
+}
+.profile-avatar {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: var(--ink);
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+  font-size: 1.3rem;
+  box-shadow: 0 0 10px rgba(50, 213, 131, 0.25);
+}
+.profile-user-info {
+  flex: 1;
+}
+.profile-user-info h3 {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+.profile-user-info span {
+  color: var(--muted);
+  font-size: var(--fs-small);
+}
+.logout-button {
+  min-height: 32px;
+  padding: 0 14px;
+  border: 1px solid var(--danger);
+  border-radius: 6px;
+  background: rgba(255, 107, 95, 0.08);
+  color: var(--danger);
+  font-weight: 800;
+  font-size: var(--fs-small);
+  cursor: pointer;
+  transition: all var(--t-fast);
+}
+.logout-button:hover {
+  background: var(--danger);
+  color: #fff;
+}
+.profile-details-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 12px;
+}
+.profile-details-grid div {
+  display: grid;
+  gap: 3px;
+}
+.profile-details-grid small {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.profile-details-grid strong {
+  font-size: 0.9rem;
+  color: var(--text);
+}
+
+/* ---------- Admin Users List ---------- */
+.admin-users-list {
+  display: grid;
+  gap: 12px;
+}
+.admin-user-card {
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  display: grid;
+  gap: 10px;
+}
+.admin-user-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 8px;
+}
+.admin-user-card-header strong {
+  font-size: 1.05rem;
+  color: var(--text);
+}
+.admin-user-card-details {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 8px 12px;
+  font-size: var(--fs-small);
+  color: var(--muted);
+}
+.admin-user-card-details strong {
+  color: var(--text);
+}
+.admin-user-card-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  border-top: 1px solid var(--line);
+  padding-top: 8px;
+  margin-top: 4px;
+}
+.admin-user-card-actions button {
+  min-height: 28px;
+  padding: 0 10px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  border-radius: 4px;
+  cursor: pointer;
+  background: var(--surface-1);
+  border: 1px solid var(--line);
+  color: var(--text);
+  transition: all var(--t-fast);
+}
+.admin-user-card-actions button:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+.admin-user-card-actions button.btn-danger {
+  color: var(--danger);
+  border-color: rgba(255, 107, 95, 0.3);
+}
+.admin-user-card-actions button.btn-danger:hover {
+  background: var(--danger);
+  color: #fff;
+}
+
