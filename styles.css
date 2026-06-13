@@ -1,0 +1,1412 @@
+:root {
+  /* =========================
+     Design Tokens (Premium)
+     ========================= */
+  color-scheme: dark;
+
+  /* Core colors */
+  --bg: #0b1114;
+  --surface: rgba(18, 26, 33, 0.72);
+  --surface-2: rgba(22, 32, 41, 0.78);
+  --line: rgba(71, 94, 110, 0.55);
+  --text: #f2fbf6;
+  --muted: rgba(173, 203, 193, 0.92);
+  --ink: #07100c;
+
+  /* Neon accents */
+  --primary: #32d583;
+  --primary-2: #14b8a6;
+  --accent: #2dd4ff;
+  --warning: #f59e0b;
+  --danger: #ff6b5f;
+
+  /* Radii & shadows */
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 22px;
+
+  --shadow-sm: 0 10px 30px rgba(0, 0, 0, 0.35);
+  --shadow: 0 22px 60px rgba(0, 0, 0, 0.46);
+  --shadow-glow: 0 0 0 1px rgba(50, 213, 131, 0.26), 0 0 32px rgba(20, 184, 166, 0.18);
+
+  /* Spacing scale */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-7: 32px;
+  --space-8: 40px;
+
+  /* Typography */
+  --font-sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --letter-wide: 0.2px;
+  --lh: 1.35;
+
+  --fs-hero: clamp(2.35rem, 12vw, 4.4rem);
+  --fs-h2: clamp(1.25rem, 3.8vw, 1.6rem);
+  --fs-h3: 1.05rem;
+  --fs-body: 0.96rem;
+  --fs-small: 0.82rem;
+
+  /* Blur & borders */
+  --blur: 18px;
+  --glass-border: rgba(255, 255, 255, 0.10);
+
+  /* Motion */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in: cubic-bezier(0.7, 0, 0.84, 0);
+  --t-quick: 140ms;
+  --t-fast: 220ms;
+  --t-med: 360ms;
+
+  /* Background animation */
+  --scan-alpha: 0.06;
+
+  /* Keep existing primary line */
+  --primary-2: #14b8a6;
+}
+
+/* Global defaults */
+:root {
+  --focus-ring: rgba(50, 213, 131, 0.45);
+}
+
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: var(--font-sans);
+  background:
+    radial-gradient(circle at 12% 4%, rgba(50, 213, 131, 0.18), transparent 26rem),
+    radial-gradient(circle at 90% 18%, rgba(45, 212, 255, 0.14), transparent 32rem),
+    linear-gradient(145deg, #0b1114 0%, #0f1a22 48%, #0c151b 100%);
+  color: var(--text);
+  letter-spacing: 0;
+}
+
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+.app-shell {
+  width: min(100%, 1180px);
+  margin: 0 auto;
+  padding: 14px 14px 96px;
+  position: relative;
+}
+
+/* Premium ambient HUD overlay */
+.app-shell::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: -1;
+  background:
+    radial-gradient(circle at 18% 22%, rgba(50, 213, 131, 0.16), transparent 58%),
+    radial-gradient(circle at 82% 18%, rgba(45, 212, 255, 0.12), transparent 55%),
+    linear-gradient(to bottom, rgba(45, 212, 255, var(--scan-alpha)), rgba(45, 212, 255, 0)) 0 0/100% 22px;
+  mix-blend-mode: screen;
+}
+
+
+.topbar,
+.bottom-nav {
+  position: sticky;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  backdrop-filter: blur(var(--blur));
+  background: rgba(10, 14, 18, 0.35);
+}
+
+
+.topbar {
+  top: 0;
+  min-height: 64px;
+  padding: 8px 0 12px;
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text);
+  text-decoration: none;
+}
+
+.brand-mark {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border: 1px solid rgba(50, 213, 131, 0.5);
+  border-radius: 8px;
+  background: linear-gradient(135deg, var(--primary), #e7ff68);
+  color: var(--ink);
+  font-weight: 900;
+}
+
+.brand strong,
+.brand small {
+  display: block;
+}
+
+.brand small,
+.muted {
+  color: var(--muted);
+}
+
+.topbar-actions,
+.hero-actions,
+.amount-row,
+.preset-row,
+.download-meta,
+.toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.icon-button,
+.profile-pill,
+.primary-action,
+.secondary-action,
+.ghost-button,
+.admin-metric button,
+.preset-row button,
+.nav-item {
+  min-height: 42px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  transition: transform 160ms ease, border-color 160ms ease, background 160ms ease;
+}
+
+.icon-button {
+  width: 42px;
+  background: var(--surface);
+  color: var(--text);
+  border-color: var(--line);
+}
+
+.profile-pill {
+  padding: 0 10px 0 4px;
+  background: var(--surface);
+  color: var(--text);
+  border-color: var(--line);
+}
+
+.avatar {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  border-radius: 50%;
+  background: #f5b84b;
+  color: #201405;
+  font-weight: 900;
+}
+
+.hero {
+  position: relative;
+  display: grid;
+  min-height: 480px;
+  align-items: end;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(8, 11, 14, 0.1), rgba(8, 11, 14, 0.88)),
+    linear-gradient(135deg, rgba(50, 213, 131, 0.24), rgba(245, 184, 75, 0.14)),
+    var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.hero-art {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  opacity: 0.96;
+}
+
+.arena-phone {
+  position: relative;
+  width: min(76vw, 360px);
+  aspect-ratio: 10 / 16;
+  border: 12px solid #0b1115;
+  border-radius: 30px;
+  background:
+    linear-gradient(rgba(255, 255, 255, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.06) 1px, transparent 1px),
+    linear-gradient(155deg, #1a2a31, #12191f 52%, #26311f);
+  background-size: 38px 38px, 38px 38px, auto;
+  transform: rotate(-7deg) translateY(-18px);
+  box-shadow: 0 28px 70px rgba(0, 0, 0, 0.42);
+}
+
+.phone-status {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  width: 82px;
+  height: 8px;
+  border-radius: 999px;
+  background: #070b0e;
+  transform: translateX(-50%);
+}
+
+.mini-card {
+  position: absolute;
+  left: 18px;
+  right: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  background: rgba(16, 20, 24, 0.78);
+}
+
+.mini-card.hot {
+  top: 64px;
+}
+
+.mini-card:not(.hot) {
+  bottom: 74px;
+}
+
+.mini-card span,
+.eyebrow,
+.quick-stats span,
+.admin-metric span,
+.ledger span,
+.leaderboard span {
+  color: var(--muted);
+  font-size: 0.78rem;
+  text-transform: uppercase;
+}
+
+.crosshair {
+  position: absolute;
+  inset: 38% 30%;
+  border: 2px solid rgba(50, 213, 131, 0.72);
+  border-radius: 50%;
+}
+
+.crosshair::before,
+.crosshair::after {
+  position: absolute;
+  content: "";
+  background: rgba(50, 213, 131, 0.72);
+}
+
+.crosshair::before {
+  top: 50%;
+  left: -18px;
+  right: -18px;
+  height: 2px;
+}
+
+.crosshair::after {
+  top: -18px;
+  bottom: -18px;
+  left: 50%;
+  width: 2px;
+}
+
+.hero-copy {
+  position: relative;
+  z-index: 2;
+  padding: 28px;
+}
+
+.eyebrow {
+  margin: 0 0 8px;
+  color: var(--primary);
+  font-weight: 800;
+}
+
+h1,
+h2,
+h3,
+p {
+  margin-top: 0;
+}
+
+h1 {
+  margin-bottom: 10px;
+  font-size: clamp(3.2rem, 18vw, 6rem);
+  line-height: 0.9;
+}
+
+h2 {
+  margin-bottom: 0;
+  font-size: 1.45rem;
+}
+
+h3 {
+  margin-bottom: 8px;
+}
+
+.hero-copy p:not(.eyebrow) {
+  max-width: 560px;
+  color: #d9e6df;
+}
+
+.primary-action,
+.secondary-action,
+.ghost-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 14px;
+  font-weight: 800;
+}
+
+.primary-action {
+  background: var(--primary);
+  color: var(--ink);
+}
+
+.secondary-action,
+.ghost-button {
+  background: rgba(255, 255, 255, 0.07);
+  color: var(--text);
+  border-color: var(--line);
+}
+
+.quick-stats,
+.wallet-grid,
+.admin-grid,
+.admin-stack {
+  display: grid;
+  gap: 10px;
+  margin: 14px 0;
+}
+
+.quick-stats {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.quick-stats article,
+.wallet-card,
+.admin-metric,
+.download-card,
+.roadmap,
+.ledger,
+.leaderboard,
+.request-list,
+.control-form {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(23, 31, 38, 0.82);
+}
+
+.quick-stats article {
+  min-width: 0;
+  padding: 12px;
+}
+
+.quick-stats strong {
+  display: block;
+  margin-top: 3px;
+  font-size: clamp(1.2rem, 5vw, 1.8rem);
+}
+
+.toolbar {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.segmented,
+.search-field {
+  display: flex;
+  min-height: 48px;
+  align-items: center;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.segment {
+  flex: 1;
+  min-height: 38px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.segment.active {
+  background: var(--primary);
+  color: var(--ink);
+}
+
+.search-field {
+  gap: 8px;
+  padding-inline: 12px;
+}
+
+.search-field input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--text);
+}
+
+.panel {
+  display: none;
+  scroll-margin-top: 88px;
+}
+
+.panel.active {
+  display: block;
+}
+
+.section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 22px 0 12px;
+}
+
+.tournament-list {
+  display: grid;
+  gap: 12px;
+}
+
+.tournament-card {
+  display: grid;
+  gap: 14px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: linear-gradient(135deg, rgba(32, 42, 50, 0.94), rgba(22, 29, 35, 0.94));
+}
+
+.tournament-top,
+.tournament-meta,
+.leader-row,
+.ledger-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.mode-badge,
+.status-pill,
+.balance-chip,
+.version-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: rgba(50, 213, 131, 0.14);
+  color: var(--primary);
+  font-size: 0.82rem;
+  font-weight: 900;
+}
+
+.tournament-title {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.tournament-meta {
+  flex-wrap: wrap;
+}
+
+.tournament-meta span {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.reward-summary {
+  margin-top: 10px;
+  color: var(--warning);
+  font-size: 0.86rem;
+  font-weight: 800;
+  line-height: 1.5;
+}
+
+.wallet-grid {
+  grid-template-columns: 1fr;
+}
+
+.wallet-card {
+  padding: 14px;
+}
+
+.wallet-card label,
+.room-form label,
+.control-form label {
+  display: grid;
+  gap: 8px;
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.amount-row input,
+.room-form input,
+.control-form input,
+.control-form select,
+.control-form textarea {
+  width: 100%;
+  min-height: 46px;
+  min-width: 0;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #0f151a;
+  color: var(--text);
+}
+
+.control-form textarea {
+  min-height: 92px;
+  padding-top: 12px;
+  resize: vertical;
+}
+
+.preset-row {
+  margin-top: 10px;
+}
+
+.preset-row button,
+.admin-metric button {
+  padding: 0 12px;
+  background: var(--surface-2);
+  color: var(--text);
+  border-color: var(--line);
+}
+
+.ledger,
+.leaderboard,
+.request-list,
+.approval-list,
+.audit-log {
+  overflow: hidden;
+}
+
+.ledger-row,
+.leader-row,
+.request-row {
+  padding: 12px 14px;
+  border-top: 1px solid var(--line);
+}
+
+.ledger-row:first-child,
+.leader-row:first-child,
+.request-row:first-child {
+  border-top: 0;
+}
+
+.request-row {
+  display: grid;
+  gap: 10px;
+}
+
+.request-row span,
+.audit-log div,
+.form-heading span {
+  color: var(--muted);
+  font-size: 0.84rem;
+}
+
+.request-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.request-actions button {
+  min-height: 36px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-2);
+  color: var(--text);
+  font-weight: 800;
+}
+
+.leader-row strong:first-child {
+  width: 32px;
+  color: var(--warning);
+}
+
+.leader-name {
+  flex: 1;
+}
+
+.toggle-row label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.admin-grid {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.admin-metric {
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+}
+
+.admin-metric strong {
+  font-size: 1.55rem;
+}
+
+.admin-metric.bgmi {
+  border-color: rgba(245, 184, 75, 0.45);
+}
+
+.room-form {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.admin-stack {
+  margin-top: 12px;
+}
+
+.control-form {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+}
+
+.form-heading {
+  display: grid;
+  gap: 4px;
+}
+
+.form-heading strong {
+  font-size: 1.05rem;
+}
+
+.reward-grid {
+  display: grid;
+  gap: 10px;
+}
+
+.full-span {
+  grid-column: 1 / -1;
+}
+
+.audit-log {
+  display: grid;
+  max-height: 230px;
+  gap: 0;
+  overflow-y: auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.audit-log div {
+  padding: 10px 12px;
+  border-top: 1px solid var(--line);
+}
+
+.audit-log div:first-child {
+  border-top: 0;
+}
+
+.super-admin {
+  border-color: rgba(255, 107, 95, 0.55);
+}
+
+.download-card {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+}
+
+.apk-visual {
+  display: grid;
+  width: 82px;
+  aspect-ratio: 1;
+  place-items: center;
+  border: 1px solid rgba(50, 213, 131, 0.45);
+  border-radius: 18px;
+  background:
+    linear-gradient(135deg, rgba(50, 213, 131, 0.95), rgba(245, 184, 75, 0.9)),
+    var(--primary);
+  color: var(--ink);
+  font-weight: 1000;
+  box-shadow: 0 18px 42px rgba(50, 213, 131, 0.18);
+}
+
+.download-meta {
+  flex-wrap: wrap;
+}
+
+.download-meta span {
+  padding: 6px 9px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.roadmap {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 14px;
+}
+
+progress {
+  width: 100%;
+  height: 12px;
+  accent-color: var(--warning);
+}
+
+.bottom-nav {
+  position: fixed;
+  right: 10px;
+  bottom: 10px;
+  left: 10px;
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  background: rgba(15, 21, 26, 0.92);
+  box-shadow: var(--shadow);
+}
+
+.nav-item {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+  place-items: center;
+  gap: 2px;
+  padding: 6px 4px;
+  background: transparent;
+  color: var(--muted);
+}
+
+.nav-item span {
+  font-size: 1.05rem;
+}
+
+.nav-item small {
+  font-size: clamp(0.58rem, 2.7vw, 0.76rem);
+}
+
+.nav-item.active {
+  background: rgba(50, 213, 131, 0.16);
+  color: var(--primary);
+}
+
+.toast {
+  position: fixed;
+  right: 14px;
+  bottom: 92px;
+  left: 14px;
+  z-index: 30;
+  display: none;
+  max-width: 520px;
+  margin: 0 auto;
+  padding: 12px 14px;
+  border: 1px solid rgba(50, 213, 131, 0.42);
+  border-radius: 8px;
+  background: #08110d;
+  color: var(--text);
+  box-shadow: var(--shadow);
+}
+
+.toast.show {
+  display: block;
+}
+
+button:hover {
+  transform: translateY(-1px);
+}
+
+button:hover .glow,
+.nav-item:hover {
+  box-shadow: var(--shadow-glow);
+}
+
+button:active {
+  transform: translateY(0) scale(0.99);
+}
+
+button:disabled,
+button[disabled] {
+  opacity: 0.55;
+  transform: none;
+}
+
+/* Smooth transitions / skeleton / reduced motion */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Premium Page Transitions */
+.panel.active {
+  display: block;
+  animation: panelEnter 0.35s var(--ease-out) forwards;
+}
+
+@keyframes panelEnter {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.995);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Slide Up Sheets for Modals */
+.tournament-detail-view.active {
+  display: block;
+  animation: slideUp 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+/* Skeleton Loading Shimmer */
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background-color: rgba(255, 255, 255, 0.05) !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+  pointer-events: none;
+}
+
+.skeleton::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  transform: translateX(-100%);
+  background-image: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.05) 20%,
+    rgba(255, 255, 255, 0.1) 60%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  animation: shimmer 1.6s infinite;
+}
+
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.skeleton-text {
+  height: 14px;
+  margin-bottom: 8px;
+  border-radius: 4px;
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+.skeleton-title {
+  height: 22px;
+  margin-bottom: 12px;
+  border-radius: 4px;
+  background-color: rgba(255, 255, 255, 0.12);
+  width: 60%;
+}
+
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  * {
+    transition: none !important;
+    animation: none !important;
+  }
+}
+
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+
+body.light {
+  color-scheme: light;
+  --bg: #f6f8f4;
+  --surface: #ffffff;
+  --surface-2: #edf4ee;
+  --line: #ccd8d0;
+  --text: #172119;
+  --muted: #5d6e64;
+  --ink: #06110b;
+  background: linear-gradient(145deg, #f6f8f4, #eaf4ed);
+}
+
+body.light .amount-row input,
+body.light .room-form input,
+body.light .control-form input,
+body.light .control-form select,
+body.light .control-form textarea {
+  background: #f8fbf8;
+}
+
+/* Premium component primitives */
+.card-glass,
+.quick-stats article,
+.wallet-card,
+.admin-metric,
+.download-card,
+.ledger,
+.leaderboard,
+.request-list,
+.approval-list,
+.audit-log,
+.control-form,
+.room-form,
+.tournament-card {
+  background: rgba(20, 30, 38, 0.58);
+  border-color: rgba(90, 120, 140, 0.45);
+  backdrop-filter: blur(14px);
+}
+
+
+@media (min-width: 760px) {
+  .app-shell {
+    padding: 18px 22px 118px;
+  }
+
+  .hero {
+    min-height: 520px;
+    align-items: center;
+  }
+
+  .hero-copy {
+    padding: 46px;
+  }
+
+  .hero-art {
+    justify-content: end;
+    padding-right: 72px;
+  }
+
+  .arena-phone {
+    width: 350px;
+  }
+
+  .toolbar {
+    grid-template-columns: 330px 1fr;
+    align-items: center;
+  }
+
+  .tournament-card {
+    grid-template-columns: 1fr auto;
+    align-items: center;
+  }
+
+  .wallet-grid,
+  .download-card {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: center;
+  }
+
+  .admin-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .room-form {
+    grid-template-columns: repeat(3, 1fr);
+    align-items: end;
+  }
+
+  .control-form {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: end;
+  }
+
+  .control-form .form-heading,
+  .control-form .reward-grid,
+  .control-form .approval-list,
+  .control-form .audit-log,
+  .control-form > button,
+  .control-form .secondary-action,
+  .control-form .primary-action {
+    grid-column: 1 / -1;
+  }
+
+  .reward-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .request-row {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    align-items: center;
+  }
+}
+
+/* =============================================================
+   PAYMENT VERIFICATION & TOURNAMENT SYSTEM
+   ============================================================= */
+
+/* ---------- Admin Login Overlay ---------- */
+.admin-login-overlay{display:none;position:fixed;inset:0;z-index:100;place-items:center;background:rgba(0,0,0,.88);backdrop-filter:blur(14px)}
+.admin-login-overlay.active{display:grid}
+.admin-login-card{width:min(92%,380px);padding:32px 24px;border:1px solid var(--line);border-radius:var(--radius-md);background:rgba(20,30,38,.95);backdrop-filter:blur(20px);box-shadow:var(--shadow);text-align:center}
+.admin-login-card h2{margin-bottom:6px;font-size:1.4rem}
+.admin-login-card p{color:var(--muted);font-size:var(--fs-small);margin-bottom:20px}
+.admin-login-card label{display:grid;gap:6px;margin-bottom:14px;text-align:left;color:var(--muted);font-weight:800;font-size:var(--fs-small)}
+.admin-login-card input{width:100%;min-height:46px;padding:0 12px;border:1px solid var(--line);border-radius:8px;background:#0f151a;color:var(--text)}
+.admin-login-card .primary-action{width:100%;margin-top:8px;min-height:48px}
+.admin-login-error{display:none;margin-top:12px;padding:10px;border-radius:8px;background:rgba(255,107,95,.15);border:1px solid rgba(255,107,95,.4);color:var(--danger);font-size:var(--fs-small);font-weight:700}
+.admin-login-error.show{display:block}
+
+/* ---------- Admin Session Bar ---------- */
+.admin-session-bar{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;margin-bottom:12px;border-radius:8px;background:rgba(50,213,131,.08);border:1px solid rgba(50,213,131,.2)}
+.admin-session-bar span{color:var(--muted);font-size:var(--fs-small)}
+.admin-session-bar button{min-height:32px;padding:0 12px;border:1px solid var(--danger);border-radius:6px;background:rgba(255,107,95,.1);color:var(--danger);font-weight:800;font-size:var(--fs-small);cursor:pointer}
+
+/* ---------- Admin Management ---------- */
+.admin-user-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--line)}
+.admin-user-row:last-child{border-bottom:0}
+.admin-user-row span{display:block;color:var(--muted);font-size:var(--fs-small)}
+.admin-user-actions{display:flex;gap:6px}
+.admin-user-actions button{min-height:30px;padding:0 10px;border:1px solid var(--line);border-radius:6px;background:var(--surface-2);color:var(--text);font-size:0.75rem;font-weight:700;cursor:pointer}
+
+/* ---------- Deposit Wizard ---------- */
+.deposit-wizard{border:1px solid var(--line);border-radius:var(--radius-md);background:rgba(20,30,38,.58);backdrop-filter:blur(14px);overflow:hidden}
+.wizard-header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--line);background:rgba(50,213,131,.06)}
+.wizard-header strong{font-size:1rem}
+.step-indicator{display:flex;align-items:center;gap:0}
+.step-dot{display:grid;width:26px;height:26px;place-items:center;border-radius:50%;border:2px solid var(--line);background:transparent;color:var(--muted);font-size:.7rem;font-weight:900;transition:all var(--t-fast) var(--ease-out)}
+.step-dot.active{border-color:var(--primary);background:var(--primary);color:var(--ink);box-shadow:0 0 14px rgba(50,213,131,.4)}
+.step-dot.completed{border-color:var(--primary);background:rgba(50,213,131,.2);color:var(--primary)}
+.step-line{width:16px;height:2px;background:var(--line);transition:background var(--t-fast)}
+.step-line.completed{background:var(--primary)}
+.wizard-step{display:none;padding:18px 16px}
+.wizard-step.active{display:grid;gap:12px}
+.wizard-step label{display:grid;gap:6px;color:var(--muted);font-weight:800;font-size:var(--fs-small)}
+.wizard-step input[type="number"],.wizard-step input[type="text"]{width:100%;min-height:46px;padding:0 12px;border:1px solid var(--line);border-radius:8px;background:#0f151a;color:var(--text);font-size:1.05rem}
+.wizard-step .preset-row{margin-top:2px}
+.wizard-actions{display:flex;gap:10px;margin-top:4px}
+.wizard-actions>*{flex:1}
+
+/* ---------- QR Display ---------- */
+.qr-display-card{padding:20px;border:1px solid rgba(50,213,131,.25);border-radius:var(--radius-md);background:rgba(50,213,131,.05);text-align:center}
+.qr-image-container{display:inline-block;padding:12px;border-radius:var(--radius-sm);background:#fff;box-shadow:0 0 24px rgba(50,213,131,.2);margin-bottom:12px}
+.qr-image-container img{display:block;width:180px;height:180px;object-fit:contain}
+.qr-info{color:var(--muted);font-size:var(--fs-small)}
+.qr-info strong{display:block;color:var(--text);font-size:1rem;margin-top:4px}
+.qr-disabled-notice{padding:24px;border:1px dashed var(--danger);border-radius:var(--radius-md);color:var(--danger);text-align:center;font-weight:700}
+
+/* ---------- File Upload ---------- */
+.file-drop-zone{position:relative;display:grid;place-items:center;min-height:90px;padding:18px;border:2px dashed var(--line);border-radius:var(--radius-sm);background:rgba(15,21,26,.6);cursor:pointer;transition:border-color var(--t-fast)}
+.file-drop-zone:hover{border-color:var(--primary);background:rgba(50,213,131,.05)}
+.file-drop-zone input[type="file"]{position:absolute;inset:0;opacity:0;cursor:pointer}
+.file-drop-zone span{color:var(--muted);font-size:var(--fs-small);text-align:center;pointer-events:none}
+.screenshot-preview-container{display:none;margin-top:8px}
+.screenshot-preview-container.has-image{display:block}
+.screenshot-thumb{width:72px;height:72px;object-fit:cover;border-radius:8px;border:2px solid var(--primary);cursor:pointer}
+
+/* ---------- Payment Confirmation ---------- */
+.payment-confirmation{text-align:center;padding:14px 0}
+.confirmation-icon{display:inline-grid;width:52px;height:52px;place-items:center;border-radius:50%;background:rgba(50,213,131,.15);color:var(--primary);font-size:1.5rem;margin-bottom:12px;border:2px solid var(--primary)}
+.confirmation-details{margin-top:12px;padding:12px;border-radius:8px;background:rgba(15,21,26,.5);border:1px solid var(--line);text-align:left;font-size:var(--fs-small);color:var(--muted)}
+.confirmation-details div{padding:3px 0}
+.confirmation-details strong{color:var(--text)}
+
+/* ---------- User Payment History ---------- */
+.payment-history-section{margin-top:14px}
+.payment-history-section>strong{display:block;margin-bottom:10px;font-size:1.05rem}
+.payment-history-list{display:grid;gap:8px}
+.payment-history-item{padding:12px;border:1px solid var(--line);border-radius:8px;background:rgba(20,30,38,.58);backdrop-filter:blur(14px);display:grid;gap:6px}
+.payment-history-header{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.payment-history-meta{display:flex;flex-wrap:wrap;gap:6px;font-size:var(--fs-small);color:var(--muted)}
+.payment-history-meta span{padding:2px 8px;border-radius:6px;background:rgba(15,21,26,.5)}
+.admin-remark{padding:8px 10px;border-radius:6px;background:rgba(245,158,11,.08);border-left:3px solid var(--warning);font-size:var(--fs-small);color:var(--muted)}
+
+/* ---------- Status Badges ---------- */
+.status-badge{display:inline-flex;align-items:center;min-height:22px;padding:0 9px;border-radius:999px;font-size:.7rem;font-weight:900;text-transform:uppercase;letter-spacing:.4px;white-space:nowrap}
+.status-badge--pending{background:rgba(245,158,11,.15);color:var(--warning);border:1px solid rgba(245,158,11,.3)}
+.status-badge--approved{background:rgba(50,213,131,.15);color:var(--primary);border:1px solid rgba(50,213,131,.3)}
+.status-badge--rejected{background:rgba(255,107,95,.15);color:var(--danger);border:1px solid rgba(255,107,95,.3)}
+
+/* ---------- Payment Stats ---------- */
+.payment-stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
+.payment-stat{padding:10px;border-radius:8px;border:1px solid var(--line);background:rgba(15,21,26,.5);text-align:center}
+.payment-stat span{display:block;color:var(--muted);font-size:.7rem;text-transform:uppercase;font-weight:700}
+.payment-stat strong{display:block;font-size:1.2rem;margin-top:3px}
+.stat-pending strong{color:var(--warning)}
+.stat-approved strong{color:var(--primary)}
+.stat-rejected strong{color:var(--danger)}
+
+/* ---------- Payment Tabs & Filter ---------- */
+.payment-filter-bar{display:grid;gap:8px;margin-bottom:12px}
+.payment-tabs{display:flex;padding:3px;border:1px solid var(--line);border-radius:8px;background:var(--surface)}
+.payment-tab{flex:1;min-height:34px;border:0;border-radius:6px;background:transparent;color:var(--muted);font-weight:800;font-size:var(--fs-small);cursor:pointer}
+.payment-tab.active{background:var(--primary);color:var(--ink)}
+
+/* ---------- Payment Review Cards ---------- */
+.payment-review-list{display:grid;gap:10px}
+.payment-review-card{border:1px solid var(--line);border-radius:var(--radius-md);background:rgba(20,30,38,.7);overflow:hidden}
+.review-card-header{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--line);background:rgba(50,213,131,.04)}
+.review-card-header strong{font-size:.9rem}
+.review-card-body{display:grid;gap:12px;padding:14px}
+.review-card-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.review-card-detail{display:grid;gap:2px}
+.review-card-detail span{color:var(--muted);font-size:.7rem;text-transform:uppercase;font-weight:700}
+.review-card-detail strong{font-size:.88rem;word-break:break-all}
+.review-screenshot{display:flex;gap:10px;align-items:start}
+.review-screenshot img{width:90px;height:90px;object-fit:cover;border-radius:8px;border:1px solid var(--line);cursor:pointer;transition:transform var(--t-fast)}
+.review-screenshot img:hover{transform:scale(1.05);box-shadow:var(--shadow-glow)}
+.review-screenshot-actions{display:flex;flex-direction:column;gap:5px}
+.review-screenshot-actions button{min-height:30px;padding:0 9px;border:1px solid var(--line);border-radius:6px;background:var(--surface-2);color:var(--text);font-size:.75rem;font-weight:700;cursor:pointer}
+.review-card-actions{display:grid;gap:8px;padding:12px 14px;border-top:1px solid var(--line);background:rgba(15,21,26,.4)}
+.review-notes-input{width:100%;min-height:50px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:#0f151a;color:var(--text);font:inherit;font-size:var(--fs-small);resize:vertical}
+.review-action-buttons{display:flex;gap:8px}
+.review-action-buttons button{flex:1;min-height:40px;border:0;border-radius:8px;font-weight:900;font-size:var(--fs-small);cursor:pointer}
+.btn-approve{background:var(--primary);color:var(--ink)}
+.btn-reject{background:rgba(255,107,95,.15);color:var(--danger);border:1px solid rgba(255,107,95,.4)!important}
+
+/* ---------- Duplicate Warning ---------- */
+.duplicate-banner{display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:8px;background:rgba(255,107,95,.12);border:1px solid rgba(255,107,95,.45);color:var(--danger);font-size:var(--fs-small);font-weight:800}
+.duplicate-banner::before{content:"\26A0";font-size:1rem}
+
+/* ---------- QR Management ---------- */
+.qr-admin-grid{display:grid;gap:12px}
+.qr-preview-section{padding:14px;border:1px solid var(--line);border-radius:8px;background:rgba(15,21,26,.5);text-align:center}
+.qr-preview-section img{max-width:140px;border-radius:8px;border:1px solid var(--line)}
+.qr-status-badge{display:inline-flex;align-items:center;gap:6px;padding:5px 11px;border-radius:999px;font-size:.75rem;font-weight:900;margin-top:8px}
+.qr-status-badge.active{background:rgba(50,213,131,.15);color:var(--primary)}
+.qr-status-badge.inactive{background:rgba(255,107,95,.15);color:var(--danger)}
+
+/* ---------- Screenshot Lightbox ---------- */
+.screenshot-lightbox{display:none;position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.92);backdrop-filter:blur(8px);place-items:center}
+.screenshot-lightbox.active{display:grid}
+.lightbox-content{position:relative;max-width:90vw;max-height:85vh;text-align:center}
+.lightbox-content img{max-width:100%;max-height:78vh;border-radius:8px;box-shadow:var(--shadow)}
+.lightbox-toolbar{display:flex;justify-content:center;gap:10px;margin-top:12px}
+.lightbox-toolbar button{min-height:38px;padding:0 14px;border:1px solid rgba(255,255,255,.2);border-radius:8px;background:rgba(255,255,255,.1);color:var(--text);font-weight:800;cursor:pointer}
+.lightbox-close{position:absolute;top:-38px;right:0;width:34px;height:34px;border:0;border-radius:50%;background:rgba(255,255,255,.15);color:var(--text);font-size:1.1rem;cursor:pointer}
+
+/* ---------- Empty State ---------- */
+.empty-state{padding:28px 14px;text-align:center;color:var(--muted)}
+.empty-state-icon{font-size:1.8rem;margin-bottom:6px;opacity:.5}
+
+/* ===== TOURNAMENT SYSTEM ===== */
+
+/* ---------- Tournament Premium Cards ---------- */
+.tournament-card-premium{border:1px solid var(--line);border-radius:var(--radius-md);background:linear-gradient(135deg,rgba(28,38,48,.92),rgba(18,25,32,.92));overflow:hidden;cursor:pointer;transition:transform var(--t-fast) var(--ease-out),box-shadow var(--t-fast)}
+.tournament-card-premium:hover{transform:translateY(-2px);box-shadow:var(--shadow-glow)}
+.tcard-header{padding:14px 14px 10px}
+.tcard-title-row{display:flex;align-items:start;justify-content:space-between;gap:8px;margin-bottom:8px}
+.tcard-title-row .tournament-title{margin:0;font-size:1.05rem}
+.tournament-status-dot{font-size:.78rem;font-weight:800;white-space:nowrap}
+.tcard-badges{display:flex;flex-wrap:wrap;gap:6px}
+.map-badge{display:inline-flex;align-items:center;min-height:24px;padding:0 8px;border-radius:999px;background:rgba(45,212,255,.12);color:var(--accent);font-size:.72rem;font-weight:900}
+.featured-badge{display:inline-flex;align-items:center;min-height:24px;padding:0 8px;border-radius:999px;background:rgba(245,184,75,.15);color:var(--warning);font-size:.72rem;font-weight:900}
+.tcard-stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--line);border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.tcard-stat{padding:10px 8px;background:rgba(15,21,26,.6);text-align:center}
+.tcard-stat span{display:block;color:var(--muted);font-size:.65rem;text-transform:uppercase;font-weight:700}
+.tcard-stat strong{display:block;font-size:.95rem;margin-top:2px}
+.tcard-slots{padding:10px 14px}
+.slots-info{display:flex;justify-content:space-between;font-size:var(--fs-small);color:var(--muted);margin-bottom:6px}
+.slots-bar{height:6px;border-radius:3px;background:rgba(255,255,255,.08);overflow:hidden}
+.slots-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,var(--primary),var(--accent));transition:width var(--t-med)}
+.tcard-times{display:flex;gap:12px;padding:0 14px 10px;font-size:.76rem;color:var(--muted)}
+.tcard-footer{display:flex;gap:8px;padding:10px 14px 14px}
+.tcard-footer button{flex:1}
+.full-width{width:100%}
+
+/* ---------- Featured & Live ---------- */
+.featured-card{position:relative;border:1px solid rgba(245,184,75,.35);border-radius:var(--radius-md);overflow:hidden;cursor:pointer;min-height:140px;background:linear-gradient(135deg,rgba(32,28,18,.9),rgba(18,25,32,.9));transition:transform var(--t-fast);margin-bottom:12px}
+.featured-card:hover{transform:translateY(-2px)}
+.featured-banner{width:100%;height:140px;object-fit:cover;opacity:.35}
+.featured-banner-placeholder{height:140px;display:grid;place-items:center;font-size:1.2rem;font-weight:900;opacity:.2}
+.featured-info{position:absolute;bottom:0;left:0;right:0;padding:14px;background:linear-gradient(transparent,rgba(0,0,0,.8))}
+.featured-info h3{margin:4px 0 0;font-size:1.1rem}
+.featured-meta{display:flex;gap:10px;margin-top:6px;font-size:.78rem;color:var(--muted)}
+.section-label{display:flex;align-items:center;gap:8px;margin-bottom:10px;font-weight:800;font-size:.88rem;color:var(--muted);text-transform:uppercase}
+.live-pulse{display:inline-block;width:8px;height:8px;border-radius:50%;background:#ff4757;animation:pulse-live 1.2s infinite}
+@keyframes pulse-live{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(1.3)}}
+.live-card{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border:1px solid rgba(255,71,87,.35);border-radius:8px;background:rgba(255,71,87,.06);margin-bottom:8px;cursor:pointer}
+.live-card span{color:var(--muted);font-size:var(--fs-small)}
+.winner-card{display:flex;align-items:center;justify-content:space-between;padding:8px 14px;border:1px solid var(--line);border-radius:8px;background:rgba(20,30,38,.5);margin-bottom:6px}
+.winner-card span{color:var(--muted);font-size:var(--fs-small)}
+.winner-prize{color:var(--primary)!important;font-weight:900}
+
+/* ---------- Tournament Detail View ---------- */
+.tournament-detail-view{display:none;position:fixed;inset:0;z-index:50;overflow-y:auto;background:var(--bg);padding:0 0 80px}
+.tournament-detail-view.active{display:block}
+.detail-hero{position:relative;padding:20px;min-height:120px;background:linear-gradient(135deg,rgba(50,213,131,.12),rgba(45,212,255,.08)),var(--surface)}
+.detail-close-btn{position:absolute;top:14px;right:14px;width:36px;height:36px;border:1px solid var(--line);border-radius:50%;background:rgba(0,0,0,.4);color:var(--text);font-size:1.1rem;cursor:pointer;z-index:2}
+.detail-hero-info{position:relative;z-index:1}
+.detail-hero-info h2{margin:6px 0 0;font-size:1.5rem}
+.detail-hero-meta{display:flex;gap:8px;margin-top:8px;font-size:var(--fs-small);color:var(--muted)}
+.detail-hero-meta span{padding:3px 8px;border-radius:6px;background:rgba(255,255,255,.08)}
+.emergency-banner{padding:10px 14px;background:rgba(255,107,95,.12);border-bottom:1px solid rgba(255,107,95,.4);color:var(--danger);font-weight:800;font-size:var(--fs-small)}
+.detail-info-grid{display:grid;gap:10px;padding:14px;max-width:900px;margin:0 auto}
+.detail-info-card{padding:14px;border:1px solid var(--line);border-radius:8px;background:rgba(20,30,38,.58);backdrop-filter:blur(14px)}
+.detail-info-card strong{display:block;margin-bottom:8px;font-size:1rem}
+.prize-breakdown,.timing-list{display:grid;gap:4px}
+.prize-row,.timing-list>div{display:flex;justify-content:space-between;padding:4px 0;font-size:var(--fs-small)}
+.prize-row span,.timing-list span{color:var(--muted)}
+
+/* ---------- Room Card ---------- */
+.room-reveal-card{margin:0 14px;padding:14px;border:1px solid rgba(50,213,131,.25);border-radius:8px;background:rgba(50,213,131,.04)}
+.room-reveal-card strong{display:block;margin-bottom:8px}
+.room-details-visible{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.room-details-visible div{display:grid;gap:2px}
+.room-details-visible span{color:var(--muted);font-size:.72rem;text-transform:uppercase;font-weight:700}
+.room-details-visible strong{font-size:1.1rem;color:var(--primary);letter-spacing:1px}
+.room-hidden{padding:14px;text-align:center;color:var(--muted);font-size:var(--fs-small)}
+
+/* ---------- Participants ---------- */
+.participant-section{padding:14px;max-width:900px;margin:0 auto}
+.participant-section>strong{display:block;margin-bottom:8px}
+.participant-list{border:1px solid var(--line);border-radius:8px;overflow:hidden;max-height:300px;overflow-y:auto}
+.participant-row{display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid var(--line);font-size:var(--fs-small)}
+.participant-row:last-child{border-bottom:0}
+.participant-row span:first-child{color:var(--warning);font-weight:900;width:28px}
+
+/* ---------- Result Submission ---------- */
+.result-submission-section{padding:14px;max-width:900px;margin:0 auto}
+.result-form{display:grid;gap:10px;padding:14px;border:1px solid var(--line);border-radius:8px;background:rgba(20,30,38,.58)}
+.result-form label{display:grid;gap:6px;color:var(--muted);font-weight:800;font-size:var(--fs-small)}
+.result-form input[type="number"],.result-form input[type="file"]{width:100%;min-height:40px;padding:0 10px;border:1px solid var(--line);border-radius:6px;background:#0f151a;color:var(--text)}
+
+/* ---------- Tournament Status Filter ---------- */
+.tournament-filter-tabs{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:10px}
+.tournament-filter-tab{min-height:32px;padding:0 10px;border:1px solid var(--line);border-radius:6px;background:transparent;color:var(--muted);font-weight:800;font-size:.72rem;cursor:pointer}
+.tournament-filter-tab.active{background:var(--primary);color:var(--ink);border-color:var(--primary)}
+
+/* ---------- Admin Tournament Card ---------- */
+.admin-tournament-card{border:1px solid var(--line);border-radius:var(--radius-md);background:rgba(20,30,38,.7);margin-bottom:12px;overflow:hidden}
+.admin-tcard-header{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid var(--line);background:rgba(50,213,131,.04)}
+.admin-tcard-header span{display:block;color:var(--muted);font-size:var(--fs-small)}
+.profit-preview{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);border-bottom:1px solid var(--line)}
+.profit-preview>div{padding:8px 10px;background:rgba(15,21,26,.6);text-align:center}
+.profit-preview span{display:block;color:var(--muted);font-size:.65rem;text-transform:uppercase;font-weight:700}
+.profit-preview strong{display:block;font-size:.88rem;margin-top:2px}
+.pending-entries,.approved-participants,.pending-results{padding:12px 14px;border-bottom:1px solid var(--line)}
+.pending-entries>strong,.approved-participants>strong,.pending-results>strong{display:block;margin-bottom:8px;font-size:.88rem}
+.participant-admin-row{display:flex;align-items:center;justify-content:space-between;padding:6px 0;font-size:var(--fs-small);border-bottom:1px solid rgba(255,255,255,.04)}
+.participant-admin-row:last-child{border-bottom:0}
+.participant-admin-row div{display:flex;gap:4px}
+.participant-admin-row button{min-height:28px;padding:0 8px;border:1px solid var(--line);border-radius:4px;background:var(--surface-2);color:var(--text);font-size:.72rem;font-weight:700;cursor:pointer}
+.result-review-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.04)}
+.result-thumb{width:50px;height:50px;object-fit:cover;border-radius:6px;border:1px solid var(--line);cursor:pointer}
+.tournament-controls{display:grid;gap:8px;padding:12px 14px}
+.tournament-controls label{display:grid;gap:4px;color:var(--muted);font-weight:800;font-size:.72rem}
+.tournament-controls select,.tournament-controls input{width:100%;min-height:36px;padding:0 8px;border:1px solid var(--line);border-radius:6px;background:#0f151a;color:var(--text);font-size:var(--fs-small)}
+.tournament-action-btns{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+.tournament-action-btns button{min-height:32px;padding:0 10px;border:1px solid var(--line);border-radius:6px;background:var(--surface-2);color:var(--text);font-size:.72rem;font-weight:700;cursor:pointer}
+
+/* ---------- Analytics ---------- */
+.analytics-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.analytics-stat{padding:12px;border:1px solid var(--line);border-radius:8px;background:rgba(15,21,26,.5);text-align:center}
+.analytics-stat span{display:block;color:var(--muted);font-size:.7rem;text-transform:uppercase;font-weight:700}
+.analytics-stat strong{display:block;font-size:1.15rem;margin-top:3px}
+
+/* ---------- Player Risk ---------- */
+.player-risk-card{padding:14px;border:1px solid var(--line);border-radius:8px;background:rgba(20,30,38,.5)}
+.risk-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:10px}
+.risk-grid>div{text-align:center}
+.risk-grid span{display:block;color:var(--muted);font-size:.7rem;text-transform:uppercase;font-weight:700}
+.risk-grid strong{display:block;font-size:1rem;margin-top:2px}
+.fraud-flags,.ban-history{margin-top:10px}
+.fraud-flags strong,.ban-history strong{display:block;margin-bottom:6px;font-size:.85rem}
+
+/* ---------- Responsive (Payment + Tournament) ---------- */
+@media(min-width:760px){
+  .tournament-list{grid-template-columns:repeat(2,1fr)}
+  .qr-admin-grid{grid-template-columns:1fr 1fr;align-items:start}
+  .payment-filter-bar{grid-template-columns:1fr auto;align-items:center}
+  .review-card-grid{grid-template-columns:repeat(3,1fr)}
+  .detail-info-grid{grid-template-columns:repeat(3,1fr)}
+  .analytics-grid{grid-template-columns:repeat(3,1fr)}
+  .profit-preview{grid-template-columns:repeat(6,1fr)}
+  .tournament-controls{grid-template-columns:repeat(3,1fr)}
+  .room-details-visible{grid-template-columns:1fr 1fr}
+  .risk-grid{grid-template-columns:repeat(4,1fr)}
+}
+
+@media (max-width: 380px) {
+  .brand strong {
+    font-size: 0.95rem;
+  }
+  .brand small {
+    font-size: 0.65rem;
+  }
+  .brand-mark {
+    width: 34px;
+    height: 34px;
+    font-size: 0.8rem;
+  }
+  .topbar-actions {
+    gap: 6px !important;
+  }
+  .profile-pill {
+    padding: 2px 6px !important;
+    font-size: 0.8rem !important;
+  }
+  .avatar {
+    width: 22px !important;
+    height: 22px !important;
+    font-size: 0.75rem !important;
+  }
+  .reward-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
