@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0a0a0f">
+  <title>Withdrawals - ArenaX Control Panel</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/assets/css/global.css">
+  <link rel="stylesheet" href="/assets/css/components.css">
+  <link rel="stylesheet" href="/assets/css/admin.css">
+</head>
+<body>
+
+  <div class="admin-layout">
+    
+    <div class="admin-main">
+      <main class="admin-content">
+
+        <div class="section-title">
+          <span>Withdrawal Payout Requests</span>
+        </div>
+
+        <!-- Filter tabs -->
+        <div class="tabs mb-6" style="max-width: 400px;">
+          <button class="tab-btn active" data-status="pending">Pending</button>
+          <button class="tab-btn" data-status="approved">Approved</button>
+          <button class="tab-btn" data-status="rejected">Rejected</button>
+        </div>
+
+        <!-- Withdrawals Table -->
+        <div class="table-container">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>User Details</th>
+                <th>Amount (INR)</th>
+                <th>UPI ID Address</th>
+                <th>Request Date</th>
+                <th>Status</th>
+                <th style="text-align: right;">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="withdrawalsTableBody">
+              <tr>
+                <td colspan="6" style="text-align: center; color: var(--text-secondary);">Loading withdrawal requests...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="pagination" id="withdrawalsPagination" style="display: none;"></div>
+
+        <!-- REJECTION MOTIVE MODAL -->
+        <div class="modal-overlay" id="rejectModal">
+          <div class="modal" style="max-width: 400px; margin: 80px auto; border-radius: 16px;">
+            <div class="modal-handle"></div>
+            <button class="modal-close" id="closeRejectModalBtn">✕</button>
+            <h3 class="modal-title">Reject Withdrawal Payout</h3>
+            
+            <form id="rejectForm">
+              <div class="form-group">
+                <label class="form-label" for="rejectReason">Rejection Reason</label>
+                <textarea id="rejectReason" class="form-control" placeholder="Enter reason (e.g. Invalid UPI ID, Blocked account, Limit exceeded)" required minlength="5" style="height: 100px; resize: none;"></textarea>
+              </div>
+              <button type="submit" id="submitRejectBtn" class="btn btn-danger w-full mt-4">❌ Confirm Rejection</button>
+            </form>
+          </div>
+        </div>
+
+      </main>
+    </div>
+
+  </div>
+
+  <div id="toast-container" style="position: fixed; top: 20px; right: 20px; z-index: 9999; pointer-events: none;"></div>
+
+  <script type="module">
+    import { api } from '/assets/js/api.js';
+    import { adminCore } from '/assets/js/admin-core.js';
+
+    const $ = id => document.getElementById(id);
+
+    let page = 1;
+    let currentStatus = 'pending';
+    let selectedWithdrawalId = null;
+
+    function showToast(message, type = 'info') {
+      const container = $('toast-container');
+      const toast = document.createElement('div');
+      toast.className = `toast ${type}`;
+      toast.textContent = message;
+      toast.style.background = '#1a1a2e';
+      toast.style.border = '1px solid rgba(255,255,255,0.08)';
+      toast.style.borderRadius = '10px';
+      toast.style.padding = '12px 18px';
+      toast.style.color = '#fff';
+      toast.style.marginBottom = '10px';
+      toast.style.pointerEvents = 'all';
+      if (type === 'success') toast.style.borderColor = '#10b981';
+      if (type === 'error') toast.style.borderColor = '#ef4444';
+      
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.remove();
+      }, 3000);
+    }
+
+    // Auth verification
+    const admin = adminCore.requireAdmin();
+    if (admin) {
+      adminCore.initLayout('withdrawals');
+      loadWithdrawals();
+
+      // Bind tabs
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          currentStatus = btn.dataset.status;
+          page = 1;
+          loadWithdrawals();
+        });
+      });
+
+      // Close reject modal
+      $('closeRejectModalBtn').addEventListener('click', () => $('rejectModal').classList.remove('open'));
+
+      // Reject form submission
+      $('rejectForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const submitBtn = $('submitRejectBtn');
+        submitBtn.disabled = true;
+
+        try {
+          const adminNote = $('rejectReason').value.trim();
+          await api.put(`/admin/withdrawals/${selectedWithdrawalId}/reject`, { adminNote });
+          showToast('Withdrawal request rejected and refunded.', 'success');
+          
+          $('rejectForm').reset();
+          $('rejectModal').classList.remove('open');
+          await loadWithdrawals();
+        } catch (err) {
+          showToast(err.message || 'Failed to reject withdrawal.', 'error');
+        } finally {
+          submitBtn.disabled = false;
+        }
+      });
+    }
+
+    async function loadWithdrawals() {
+      try {
+        const res = await api.get('/admin/withdrawals', { page, limit: 10, status: currentStatus });
+        const data = res.data || res;
+        const list = data.withdrawals || [];
+        const pagination = data.pagination || {};
+
+        if (list.length === 0) {
+          $('withdrawalsTableBody').innerHTML = `
+            <tr>
+              <td colspan="6" style="text-align: center; color: var(--text-secondary); padding: 32px 0;">
+                No withdrawal requests found in this section.
+              </td>
+            </tr>`;
+          $('withdrawalsPagination').style.display = 'none';
+          return;
+        }
+
+        let html = '';
+        list.forEach(w => {
+          const dateStr = new Date(w.created_at).toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+          
+          let actionsHtml = '';
+          if (currentStatus === 'pending') {
+            actionsHtml = `
+              <button class="btn btn-primary btn-xs approve-btn" data-id="${w.id}" data-amount="${w.amount}">Mark Payout</button>
+              <button class="btn btn-danger btn-xs reject-btn" data-id="${w.id}">Reject</button>
+            `;
+          } else {
+            actionsHtml = `<span style="font-size:12px; color:var(--text-secondary)">Processed</span>`;
+          }
+
+          html += `
+            <tr>
+              <td>
+                <div style="font-weight: 700; color: #fff;">${w.username}</div>
+                <div style="font-size: 11px; color: var(--text-secondary); margin-top: 2px;">Email: ${w.email}</div>
+              </td>
+              <td style="font-weight: 700; color: var(--danger);">₹${parseFloat(w.amount).toFixed(2)}</td>
+              <td style="font-family: monospace; font-size: 13.5px; color: var(--secondary-light);">${w.upi_id}</td>
+              <td>${dateStr}</td>
+              <td>
+                <span class="badge ${w.status === 'approved' ? 'badge-approved' : (w.status === 'rejected' ? 'badge-rejected' : 'badge-pending')}">${w.status}</span>
+              </td>
+              <td style="text-align: right;">
+                <div style="display: inline-flex; gap: 8px;">
+                  ${actionsHtml}
+                </div>
+              </td>
+            </tr>
+          `;
+        });
+        $('withdrawalsTableBody').innerHTML = html;
+
+        // Bind approval clicks
+        document.querySelectorAll('.approve-btn').forEach(btn => {
+          btn.addEventListener('click', async () => {
+            const wid = btn.dataset.id;
+            const amt = btn.dataset.amount;
+            if (confirm(`Mark withdrawal request of ₹${parseFloat(amt).toFixed(2)} as completed? (Confirm that you have completed the UPI payment transfer)`)) {
+              try {
+                await api.put(`/admin/withdrawals/${wid}/approve`);
+                showToast('Withdrawal marked as completed.', 'success');
+                await loadWithdrawals();
+              } catch (err) {
+                showToast(err.message || 'Failed to approve withdrawal.', 'error');
+              }
+            }
+          });
+        });
+
+        // Bind rejection clicks
+        document.querySelectorAll('.reject-btn').forEach(btn => {
+          btn.addEventListener('click', () => {
+            selectedWithdrawalId = btn.dataset.id;
+            $('rejectModal').classList.add('open');
+          });
+        });
+
+        // Pagination
+        if (pagination.pages > 1) {
+          $('withdrawalsPagination').style.display = 'flex';
+          let pagHtml = '';
+          for (let i = 1; i <= pagination.pages; i++) {
+            pagHtml += `<button class="page-btn ${i === pagination.page ? 'active' : ''}" data-page="${i}">${i}</button>`;
+          }
+          $('withdrawalsPagination').innerHTML = pagHtml;
+
+          $('withdrawalsPagination').querySelectorAll('.page-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+              page = parseInt(btn.dataset.page, 10);
+              await loadWithdrawals();
+            });
+          });
+        } else {
+          $('withdrawalsPagination').style.display = 'none';
+        }
+
+      } catch (err) {
+        console.error(err);
+        showToast('Failed to load withdrawals list.', 'error');
+      }
+    }
+  </script>
+</body>
+</html>

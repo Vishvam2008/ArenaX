@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0a0a0f">
+  <title>Admin Login - ArenaX Control Panel</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/assets/css/global.css">
+  <link rel="stylesheet" href="/assets/css/components.css">
+  <link rel="stylesheet" href="/assets/css/admin.css">
+  <style>
+    body {
+      background-color: var(--bg-primary);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .admin-login-card {
+      width: 100%;
+      max-width: 400px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-glass);
+      border-radius: 20px;
+      padding: 32px 24px;
+      box-shadow: 0 12px 40px rgba(0,0,0,0.6);
+      text-align: center;
+    }
+
+    .admin-login-logo {
+      font-family: var(--font-display);
+      font-size: 32px;
+      font-weight: 800;
+      color: #fff;
+      margin-bottom: 8px;
+    }
+
+    .admin-login-subtitle {
+      font-size: 13.5px;
+      color: var(--text-secondary);
+      margin-bottom: 28px;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+      text-align: left;
+    }
+
+    .form-label {
+      display: block;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-secondary);
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .form-control {
+      width: 100%;
+      background: var(--bg-primary);
+      border: 1px solid var(--border-glass);
+      border-radius: 10px;
+      padding: 12px 14px;
+      color: #fff;
+      font-family: var(--font-body);
+      font-size: 14px;
+      transition: border-color 0.2s;
+    }
+
+    .form-control:focus {
+      outline: none;
+      border-color: var(--primary);
+    }
+  </style>
+</head>
+<body>
+
+  <div class="admin-login-card">
+    <div class="admin-login-logo">ArenaX Control</div>
+    <div class="admin-login-subtitle">Secure Administrator Login</div>
+
+    <form id="adminLoginForm">
+      <div class="form-group">
+        <label class="form-label" for="email">Admin Email</label>
+        <input type="email" id="email" class="form-control" placeholder="admin@arenax.in" required autocomplete="username">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="password">Password</label>
+        <input type="password" id="password" class="form-control" placeholder="••••••••••••" required autocomplete="current-password">
+      </div>
+
+      <button type="submit" id="loginBtn" class="btn btn-primary w-full mt-4">🔐 Authenticate</button>
+    </form>
+  </div>
+
+  <div id="toast-container" style="position: fixed; top: 20px; right: 20px; z-index: 9999; pointer-events: none;"></div>
+
+  <script type="module">
+    import { api } from '/assets/js/api.js';
+
+    const $ = id => document.getElementById(id);
+
+    function showToast(message, type = 'info') {
+      const container = $('toast-container');
+      const toast = document.createElement('div');
+      toast.className = `toast ${type}`;
+      toast.textContent = message;
+      toast.style.background = '#1a1a2e';
+      toast.style.border = '1px solid rgba(255,255,255,0.08)';
+      toast.style.borderRadius = '10px';
+      toast.style.padding = '12px 18px';
+      toast.style.color = '#fff';
+      toast.style.marginBottom = '10px';
+      toast.style.pointerEvents = 'all';
+      if (type === 'success') toast.style.borderColor = '#10b981';
+      if (type === 'error') toast.style.borderColor = '#ef4444';
+      
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.remove();
+      }, 3000);
+    }
+
+    $('adminLoginForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const loginBtn = $('loginBtn');
+      loginBtn.disabled = true;
+      loginBtn.textContent = 'Authenticating...';
+
+      const email = $('email').value.trim();
+      const password = $('password').value;
+
+      try {
+        const res = await api.post('/admin/login', { email, password });
+        const data = res.data || res;
+
+        if (data.accessToken && data.admin) {
+          localStorage.setItem('arenax_admin_token', data.accessToken);
+          localStorage.setItem('arenax_admin_user', JSON.stringify(data.admin));
+          
+          showToast('Authentication successful!', 'success');
+          setTimeout(() => {
+            window.location.href = '/public/admin/dashboard.html';
+          }, 500);
+        } else {
+          showToast('Invalid credentials or permissions.', 'error');
+        }
+      } catch (err) {
+        console.error(err);
+        showToast(err.message || 'Login failed.', 'error');
+      } finally {
+        loginBtn.disabled = false;
+        loginBtn.textContent = '🔐 Authenticate';
+      }
+    });
+  </script>
+</body>
+</html>

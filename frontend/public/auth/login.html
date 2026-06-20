@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login - ArenaX</title>
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#7c3aed">
+  <meta name="description" content="Login to ArenaX – the ultimate esports tournament platform for Free Fire players.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/assets/css/global.css">
+  <link rel="stylesheet" href="/assets/css/components.css">
+  <style>
+    :root {
+      --color-bg: #0a0a0f;
+      --color-surface: #12121a;
+      --color-surface-2: #1a1a26;
+      --color-border: rgba(124,58,237,0.18);
+      --color-primary: #7c3aed;
+      --color-primary-light: #a78bfa;
+      --color-accent: #06b6d4;
+      --color-text: #e2e8f0;
+      --color-muted: #94a3b8;
+      --color-error: #f87171;
+      --color-success: #34d399;
+      --radius: 14px;
+      --transition: 0.22s cubic-bezier(.4,0,.2,1);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', 'Outfit', sans-serif;
+      background: var(--color-bg);
+      color: var(--color-text);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Animated background */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 80% 60% at 15% 20%, rgba(124,58,237,0.18) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 40% at 85% 75%, rgba(6,182,212,0.10) 0%, transparent 55%),
+        radial-gradient(ellipse 50% 30% at 50% 90%, rgba(167,139,250,0.08) 0%, transparent 60%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* Grid noise overlay */
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(124,58,237,0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(124,58,237,0.04) 1px, transparent 1px);
+      background-size: 44px 44px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .auth-wrapper {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      max-width: 440px;
+      padding: 24px 16px;
+      animation: fadeInUp 0.5s ease both;
+    }
+
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(28px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .auth-card {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: 20px;
+      padding: 40px 36px 36px;
+      box-shadow:
+        0 0 0 1px rgba(124,58,237,0.08),
+        0 24px 64px rgba(0,0,0,0.55),
+        0 0 80px rgba(124,58,237,0.06);
+      backdrop-filter: blur(24px);
+    }
+
+    /* Logo */
+    .logo-area {
+      text-align: center;
+      margin-bottom: 28px;
+    }
+
+    .logo-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 56px;
+      height: 56px;
+      background: linear-gradient(135deg, #7c3aed, #06b6d4);
+      border-radius: 16px;
+      margin-bottom: 14px;
+      box-shadow: 0 8px 24px rgba(124,58,237,0.35);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .logo-icon::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(255,255,255,0.15), transparent);
+    }
+
+    .logo-icon svg {
+      width: 30px;
+      height: 30px;
+      fill: white;
+    }
+
+    .logo-text {
+      font-family: 'Outfit', sans-serif;
+      font-size: 28px;
+      font-weight: 700;
+      background: linear-gradient(135deg, #a78bfa, #06b6d4);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      letter-spacing: -0.5px;
+      display: block;
+    }
+
+    .logo-subtitle {
+      font-family: 'Inter', sans-serif;
+      font-size: 14px;
+      color: var(--color-muted);
+      margin-top: 6px;
+      font-weight: 400;
+    }
+
+    /* Form */
+    .form-group {
+      margin-bottom: 18px;
+    }
+
+    .form-label {
+      display: block;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--color-muted);
+      margin-bottom: 7px;
+      letter-spacing: 0.02em;
+    }
+
+    .input-wrapper {
+      position: relative;
+    }
+
+    .form-input {
+      width: 100%;
+      background: var(--color-surface-2);
+      border: 1px solid rgba(124,58,237,0.2);
+      border-radius: var(--radius);
+      padding: 12px 16px;
+      font-size: 15px;
+      font-family: 'Inter', sans-serif;
+      color: var(--color-text);
+      outline: none;
+      transition: border-color var(--transition), box-shadow var(--transition), background var(--transition);
+      -webkit-appearance: none;
+    }
+
+    .form-input::placeholder {
+      color: rgba(148,163,184,0.45);
+    }
+
+    .form-input:focus {
+      border-color: var(--color-primary);
+      background: rgba(124,58,237,0.07);
+      box-shadow: 0 0 0 3px rgba(124,58,237,0.14);
+    }
+
+    .form-input.has-icon-right {
+      padding-right: 46px;
+    }
+
+    .form-input.error {
+      border-color: var(--color-error);
+      box-shadow: 0 0 0 3px rgba(248,113,113,0.13);
+    }
+
+    .input-icon-right {
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--color-muted);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 4px;
+      border-radius: 6px;
+      transition: color var(--transition), background var(--transition);
+    }
+
+    .input-icon-right:hover {
+      color: var(--color-primary-light);
+      background: rgba(124,58,237,0.1);
+    }
+
+    /* Remember Me + Forgot */
+    .form-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 22px;
+    }
+
+    .checkbox-label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      font-size: 13.5px;
+      color: var(--color-muted);
+      user-select: none;
+    }
+
+    .checkbox-label input[type="checkbox"] {
+      appearance: none;
+      -webkit-appearance: none;
+      width: 17px;
+      height: 17px;
+      border: 1.5px solid rgba(124,58,237,0.35);
+      border-radius: 5px;
+      background: var(--color-surface-2);
+      cursor: pointer;
+      position: relative;
+      transition: border-color var(--transition), background var(--transition);
+      flex-shrink: 0;
+    }
+
+    .checkbox-label input[type="checkbox"]:checked {
+      background: var(--color-primary);
+      border-color: var(--color-primary);
+    }
+
+    .checkbox-label input[type="checkbox"]:checked::after {
+      content: '';
+      position: absolute;
+      left: 4px;
+      top: 1.5px;
+      width: 6px;
+      height: 10px;
+      border: 2px solid white;
+      border-top: none;
+      border-left: none;
+      transform: rotate(45deg);
+    }
+
+    .forgot-link {
+      font-size: 13px;
+      color: var(--color-primary-light);
+      text-decoration: none;
+      transition: color var(--transition), opacity var(--transition);
+      font-weight: 500;
+    }
+
+    .forgot-link:hover {
+      color: white;
+      text-decoration: underline;
+    }
+
+    /* Buttons */
+    .btn-primary {
+      width: 100%;
+      padding: 13px 20px;
+      background: linear-gradient(135deg, #7c3aed, #5b21b6);
+      border: none;
+      border-radius: var(--radius);
+      color: white;
+      font-size: 15px;
+      font-weight: 600;
+      font-family: 'Outfit', sans-serif;
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+      transition: transform var(--transition), box-shadow var(--transition), opacity var(--transition);
+      letter-spacing: 0.02em;
+      box-shadow: 0 4px 20px rgba(124,58,237,0.35);
+    }
+
+    .btn-primary::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(255,255,255,0.12), transparent);
+      opacity: 0;
+      transition: opacity var(--transition);
+    }
+
+    .btn-primary:hover:not(:disabled)::before { opacity: 1; }
+
+    .btn-primary:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: 0 8px 28px rgba(124,58,237,0.45);
+    }
+
+    .btn-primary:active:not(:disabled) {
+      transform: translateY(0);
+    }
+
+    .btn-primary:disabled {
+      opacity: 0.65;
+      cursor: not-allowed;
+    }
+
+    .btn-primary .btn-text { display: inline; }
+    .btn-primary .btn-loader { display: none; align-items: center; gap: 8px; }
+    .btn-primary.loading .btn-text { display: none; }
+    .btn-primary.loading .btn-loader { display: inline-flex; }
+
+    /* Spinner */
+    .spinner {
+      width: 18px;
+      height: 18px;
+      border: 2.5px solid rgba(255,255,255,0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* Error message */
+    .error-msg {
+      display: none;
+      background: rgba(248,113,113,0.1);
+      border: 1px solid rgba(248,113,113,0.25);
+      border-radius: 10px;
+      padding: 11px 15px;
+      margin-bottom: 18px;
+      font-size: 13.5px;
+      color: var(--color-error);
+      display: flex;
+      align-items: flex-start;
+      gap: 9px;
+      animation: fadeIn 0.25s ease;
+    }
+
+    .error-msg.hidden { display: none !important; }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .error-msg svg { flex-shrink: 0; margin-top: 1px; }
+
+    /* Success message */
+    .success-msg {
+      display: none;
+      background: rgba(52,211,153,0.1);
+      border: 1px solid rgba(52,211,153,0.25);
+      border-radius: 10px;
+      padding: 11px 15px;
+      margin-bottom: 18px;
+      font-size: 13.5px;
+      color: var(--color-success);
+      align-items: flex-start;
+      gap: 9px;
+      animation: fadeIn 0.25s ease;
+    }
+
+    .success-msg.visible { display: flex !important; }
+
+    /* Divider */
+    .auth-divider {
+      text-align: center;
+      margin: 22px 0 18px;
+      position: relative;
+    }
+
+    .auth-divider::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: rgba(124,58,237,0.15);
+    }
+
+    .auth-divider span {
+      position: relative;
+      background: var(--color-surface);
+      padding: 0 12px;
+      font-size: 12px;
+      color: var(--color-muted);
+    }
+
+    .auth-footer {
+      text-align: center;
+      font-size: 14px;
+      color: var(--color-muted);
+      margin-top: 22px;
+    }
+
+    .auth-footer a {
+      color: var(--color-primary-light);
+      text-decoration: none;
+      font-weight: 600;
+      transition: color var(--transition);
+    }
+
+    .auth-footer a:hover {
+      color: white;
+      text-decoration: underline;
+    }
+
+    /* Animated border glow on card hover */
+    .auth-card:hover {
+      border-color: rgba(124,58,237,0.3);
+      box-shadow:
+        0 0 0 1px rgba(124,58,237,0.12),
+        0 24px 64px rgba(0,0,0,0.6),
+        0 0 120px rgba(124,58,237,0.08);
+      transition: box-shadow 0.4s ease, border-color 0.4s ease;
+    }
+
+    @media (max-width: 480px) {
+      .auth-card {
+        padding: 30px 22px 26px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="auth-wrapper">
+    <div class="auth-card">
+
+      <!-- Logo -->
+      <div class="logo-area">
+        <div class="logo-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+          </svg>
+        </div>
+        <span class="logo-text">ArenaX</span>
+        <p class="logo-subtitle">Welcome Back, Champion 👋</p>
+      </div>
+
+      <!-- Success message (shown when coming from register) -->
+      <div class="success-msg hidden" id="successMsg" role="alert">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+          <polyline points="22 4 12 14.01 9 11.01"/>
+        </svg>
+        <span id="successMsgText">Account created! Please log in.</span>
+      </div>
+
+      <!-- Error message -->
+      <div class="error-msg hidden" id="errorMsg" role="alert">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <circle cx="12" cy="12" r="10"/>
+          <line x1="12" y1="8" x2="12" y2="12"/>
+          <line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+        <span id="errorMsgText">An error occurred. Please try again.</span>
+      </div>
+
+      <!-- Login Form -->
+      <form id="loginForm" novalidate>
+
+        <div class="form-group">
+          <label class="form-label" for="email">Email Address</label>
+          <div class="input-wrapper">
+            <input
+              type="email"
+              id="email"
+              name="email"
+              class="form-input"
+              placeholder="you@example.com"
+              autocomplete="email"
+              required
+              aria-required="true"
+            >
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="password">Password</label>
+          <div class="input-wrapper">
+            <input
+              type="password"
+              id="password"
+              name="password"
+              class="form-input has-icon-right"
+              placeholder="Enter your password"
+              autocomplete="current-password"
+              required
+              aria-required="true"
+            >
+            <button
+              type="button"
+              class="input-icon-right"
+              id="togglePassword"
+              aria-label="Toggle password visibility"
+              tabindex="0"
+            >
+              <!-- Eye icon (show) -->
+              <svg id="eyeShow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                <circle cx="12" cy="12" r="3"/>
+              </svg>
+              <!-- Eye-off icon (hide) -->
+              <svg id="eyeHide" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none;">
+                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
+                <line x1="1" y1="1" x2="23" y2="23"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <label class="checkbox-label">
+            <input type="checkbox" id="rememberMe" name="rememberMe">
+            Remember me
+          </label>
+          <a href="/public/auth/forgot-password.html" class="forgot-link">Forgot password?</a>
+        </div>
+
+        <button type="submit" class="btn-primary" id="loginBtn">
+          <span class="btn-text">Login to ArenaX</span>
+          <span class="btn-loader" aria-hidden="true">
+            <span class="spinner"></span>
+            Logging in...
+          </span>
+        </button>
+
+      </form>
+
+      <div class="auth-divider"><span>or</span></div>
+
+      <div class="auth-footer">
+        Don't have an account?&nbsp;
+        <a href="/public/auth/register.html" id="registerLink">Create Account</a>
+      </div>
+
+    </div>
+  </div>
+
+  <script type="module">
+    // ── Imports ──────────────────────────────────────────────────────────────
+    // NOTE: These modules are expected at these paths in the project.
+    // If modules aren't available yet, the inline fallback logic below handles gracefully.
+    let api, auth, toast;
+    try {
+      const apiMod  = await import('/assets/js/api.js');
+      const authMod = await import('/assets/js/auth.js');
+      const notifMod = await import('/assets/js/notifications.js');
+      api   = apiMod.api;
+      auth  = authMod.auth;
+      toast = notifMod.toast;
+    } catch (e) {
+      console.warn('[ArenaX] Module import failed, using inline fallback:', e.message);
+    }
+
+    // ── Helpers ───────────────────────────────────────────────────────────────
+    const $ = id => document.getElementById(id);
+
+    function showError(msg) {
+      const el = $('errorMsg');
+      $('errorMsgText').textContent = msg;
+      el.classList.remove('hidden');
+      el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    function hideError() {
+      $('errorMsg').classList.add('hidden');
+    }
+
+    function setLoading(state) {
+      const btn = $('loginBtn');
+      btn.disabled = state;
+      btn.classList.toggle('loading', state);
+    }
+
+    function isValidEmail(val) {
+      return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val.trim());
+    }
+
+    // ── URL Param Handling ────────────────────────────────────────────────────
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('registered') === '1') {
+      const el = $('successMsg');
+      $('successMsgText').textContent = '🎉 Account created successfully! Please log in.';
+      el.classList.add('visible');
+      el.classList.remove('hidden');
+    }
+    if (params.get('reset') === '1') {
+      const el = $('successMsg');
+      $('successMsgText').textContent = '✅ Password reset! You can now log in with your new password.';
+      el.classList.add('visible');
+      el.classList.remove('hidden');
+    }
+
+    // ── Auth Guard ────────────────────────────────────────────────────────────
+    try {
+      if (auth) {
+        await auth.init();
+        if (auth.isLoggedIn()) {
+          window.location.href = '/public/dashboard/';
+        }
+      } else {
+        // Inline fallback: check localStorage token
+        const token = localStorage.getItem('arenaX_token');
+        if (token) window.location.href = '/public/dashboard/';
+      }
+    } catch (e) {
+      console.warn('[ArenaX] Auth guard error:', e.message);
+    }
+
+    // ── Password Toggle ───────────────────────────────────────────────────────
+    const toggleBtn  = $('togglePassword');
+    const pwdInput   = $('password');
+    const eyeShow    = $('eyeShow');
+    const eyeHide    = $('eyeHide');
+
+    toggleBtn.addEventListener('click', () => {
+      const isHidden = pwdInput.type === 'password';
+      pwdInput.type  = isHidden ? 'text' : 'password';
+      eyeShow.style.display = isHidden ? 'none'   : '';
+      eyeHide.style.display = isHidden ? ''       : 'none';
+      toggleBtn.setAttribute('aria-label', isHidden ? 'Hide password' : 'Show password');
+    });
+
+    // ── Form Submit ───────────────────────────────────────────────────────────
+    $('loginForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      hideError();
+
+      const email    = $('email').value.trim();
+      const password = $('password').value;
+      const remember = $('rememberMe').checked;
+
+      // Client-side validation
+      if (!email) {
+        showError('Please enter your email address.');
+        $('email').focus();
+        return;
+      }
+      if (!isValidEmail(email)) {
+        showError('Please enter a valid email address.');
+        $('email').focus();
+        return;
+      }
+      if (!password) {
+        showError('Please enter your password.');
+        $('password').focus();
+        return;
+      }
+      if (password.length < 6) {
+        showError('Password must be at least 6 characters.');
+        $('password').focus();
+        return;
+      }
+
+      setLoading(true);
+
+      try {
+        let data;
+
+        if (api) {
+          // Use API module
+          data = await api.post('/api/auth/login', { email, password });
+        } else {
+          // Inline fallback fetch
+          const res = await fetch('/api/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password }),
+          });
+          data = await res.json();
+          if (!res.ok) {
+            throw new Error(data.message || data.error || 'Login failed');
+          }
+        }
+
+        // Persist auth
+        const token = data.token || data.data?.token;
+        const user  = data.user  || data.data?.user;
+
+        if (token) {
+          if (remember) {
+            localStorage.setItem('arenaX_token', token);
+            localStorage.setItem('arenaX_user',  JSON.stringify(user || {}));
+          } else {
+            sessionStorage.setItem('arenaX_token', token);
+            sessionStorage.setItem('arenaX_user',  JSON.stringify(user || {}));
+          }
+        }
+
+        if (auth) {
+          auth.login(user, token);
+        }
+
+        // Show toast if available
+        if (toast) {
+          toast.success('Welcome back! Redirecting…');
+        }
+
+        // Redirect
+        setTimeout(() => {
+          window.location.href = '/public/dashboard/';
+        }, 300);
+
+      } catch (err) {
+        console.error('[ArenaX] Login error:', err);
+        const msg = err.message || 'Login failed. Please check your credentials and try again.';
+        showError(msg);
+        setLoading(false);
+      }
+    });
+
+    // Clear error on input
+    ['email', 'password'].forEach(id => {
+      $(id).addEventListener('input', hideError);
+    });
+  </script>
+
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch(console.error);
+    }
+  </script>
+</body>
+</html>

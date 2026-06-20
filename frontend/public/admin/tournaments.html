@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0a0a0f">
+  <title>Tournaments - ArenaX Control Panel</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/assets/css/global.css">
+  <link rel="stylesheet" href="/assets/css/components.css">
+  <link rel="stylesheet" href="/assets/css/admin.css">
+  <style>
+    .controls-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .filters-group {
+      display: flex;
+      gap: 12px;
+      flex: 1;
+      min-width: 260px;
+    }
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    @media (max-width: 576px) {
+      .form-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="admin-layout">
+    
+    <div class="admin-main">
+      <main class="admin-content">
+
+        <div class="controls-row">
+          <div class="filters-group">
+            <select id="filterStatus" class="form-control" style="background: var(--bg-secondary); width: 200px;">
+              <option value="">All Statuses</option>
+              <option value="upcoming">Upcoming</option>
+              <option value="registration_open">Registration Open</option>
+              <option value="registration_closed">Registration Closed</option>
+              <option value="checkin_open">Check-In Open</option>
+              <option value="room_released">Room Released</option>
+              <option value="live">Live</option>
+              <option value="result_verification">Result Verification</option>
+              <option value="completed">Completed</option>
+              <option value="cancelled">Cancelled</option>
+            </select>
+          </div>
+          <button id="openCreateModalBtn" class="btn btn-primary">🏆 Create Tournament</button>
+        </div>
+
+        <!-- Tournaments list -->
+        <div class="table-container">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Tournament Details</th>
+                <th>Game & Format</th>
+                <th>Fee & Prize Pool</th>
+                <th>Slots Info</th>
+                <th>Status</th>
+                <th style="text-align: right;">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="tournamentsTableBody">
+              <tr>
+                <td colspan="6" style="text-align: center; color: var(--text-secondary);">Loading tournaments list...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="pagination" id="tournamentsPagination" style="display: none;"></div>
+
+        <!-- 1. CREATE MODAL -->
+        <div class="modal-overlay" id="createModal">
+          <div class="modal" style="max-width: 600px; margin: 40px auto; border-radius: 16px;">
+            <div class="modal-handle"></div>
+            <button class="modal-close" id="closeCreateModalBtn">✕</button>
+            <h3 class="modal-title">Create New Tournament</h3>
+            
+            <form id="createTournamentForm" enctype="multipart/form-data">
+              <div class="form-group">
+                <label class="form-label" for="title">Tournament Title</label>
+                <input type="text" id="title" class="form-control" placeholder="E.g. Sunday Booyah Showdown" required minlength="5" maxlength="150">
+              </div>
+
+              <div class="form-grid">
+                <div class="form-group">
+                  <label class="form-label" for="game">Game Target</label>
+                  <select id="game" class="form-control" required style="background: var(--bg-primary);">
+                    <option value="free_fire" selected>Free Fire</option>
+                    <option value="bgmi">BGMI</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="matchType">Match Format</label>
+                  <select id="matchType" class="form-control" required style="background: var(--bg-primary);">
+                    <option value="solo">Solo</option>
+                    <option value="duo">Duo</option>
+                    <option value="squad" selected>Squad</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="form-grid">
+                <div class="form-group">
+                  <label class="form-label" for="entryFee">Entry Fee (INR)</label>
+                  <input type="number" id="entryFee" class="form-control" placeholder="E.g. 50" min="0" required>
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="prizePool">Total Prize Pool (INR)</label>
+                  <input type="number" id="prizePool" class="form-control" placeholder="E.g. 1000" min="0" required>
+                </div>
+              </div>
+
+              <div class="form-grid">
+                <div class="form-group">
+                  <label class="form-label" for="perKillReward">Per Kill Reward (INR)</label>
+                  <input type="number" id="perKillReward" class="form-control" placeholder="E.g. 5" min="0" required>
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="booyahReward">Booyah Winner Reward (INR)</label>
+                  <input type="number" id="booyahReward" class="form-control" placeholder="E.g. 200" min="0" required>
+                </div>
+              </div>
+
+              <div class="form-grid">
+                <div class="form-group">
+                  <label class="form-label" for="totalSlots">Total Player/Team Slots</label>
+                  <input type="number" id="totalSlots" class="form-control" placeholder="E.g. 48" min="2" max="200" required>
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="banner">Banner Image (Optional)</label>
+                  <input type="file" id="banner" accept="image/*" class="form-control" style="padding: 8px 12px;">
+                </div>
+              </div>
+
+              <div class="form-grid">
+                <div class="form-group">
+                  <label class="form-label" for="matchTime">Match Start Time</label>
+                  <input type="datetime-local" id="matchTime" class="form-control" required>
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="registrationEndTime">Reg. End Time</label>
+                  <input type="datetime-local" id="registrationEndTime" class="form-control" required>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="rulesText">Custom Rules & Instructions</label>
+                <textarea id="rulesText" class="form-control" placeholder="Enter custom rules, map details, guidelines..." style="height: 100px; resize: none;"></textarea>
+              </div>
+
+              <button type="submit" id="submitBtn" class="btn btn-primary w-full mt-4">🏆 Create Tournament</button>
+            </form>
+          </div>
+        </div>
+
+        <!-- 2. RELEASE ROOM DETAILS MODAL -->
+        <div class="modal-overlay" id="roomModal">
+          <div class="modal" style="max-width: 450px; margin: 60px auto; border-radius: 16px;">
+            <div class="modal-handle"></div>
+            <button class="modal-close" id="closeRoomModalBtn">✕</button>
+            <h3 class="modal-title">Release Game Lobby Details</h3>
+            
+            <form id="roomDetailsForm">
+              <div class="form-group">
+                <label class="form-label" for="roomId">Lobby Room ID</label>
+                <input type="text" id="roomId" class="form-control" placeholder="E.g. 9876543" required>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="roomPassword">Lobby Password</label>
+                <input type="text" id="roomPassword" class="form-control" placeholder="E.g. 1234" required>
+              </div>
+              <button type="submit" id="submitRoomBtn" class="btn btn-primary w-full mt-4">📢 Release Details</button>
+            </form>
+          </div>
+        </div>
+
+        <!-- 3. UPDATE STATUS MODAL -->
+        <div class="modal-overlay" id="statusModal">
+          <div class="modal" style="max-width: 400px; margin: 80px auto; border-radius: 16px;">
+            <div class="modal-handle"></div>
+            <button class="modal-close" id="closeStatusModalBtn">✕</button>
+            <h3 class="modal-title">Update Match Status</h3>
+            
+            <form id="statusForm">
+              <div class="form-group">
+                <label class="form-label" for="newStatus">Match State</label>
+                <select id="newStatus" class="form-control" style="background: var(--bg-primary);">
+                  <option value="upcoming">Upcoming</option>
+                  <option value="registration_open">Registration Open</option>
+                  <option value="registration_closed">Registration Closed</option>
+                  <option value="checkin_open">Check-In Open</option>
+                  <option value="room_released">Room Released</option>
+                  <option value="live">Live</option>
+                  <option value="result_verification">Result Verification</option>
+                  <option value="completed">Completed</option>
+                  <option value="cancelled">Cancelled</option>
+                </select>
+              </div>
+              <button type="submit" id="submitStatusBtn" class="btn btn-primary w-full mt-4">⚡ Update Status</button>
+            </form>
+          </div>
+        </div>
+
+      </main>
+    </div>
+
+  </div>
+
+  <div id="toast-container" style="position: fixed; top: 20px; right: 20px; z-index: 9999; pointer-events: none;"></div>
+
+  <script type="module">
+    import { api } from '/assets/js/api.js';
+    import { adminCore } from '/assets/js/admin-core.js';
+
+    const $ = id => document.getElementById(id);
+
+    let page = 1;
+    let selectedTournamentId = null;
+
+    function showToast(message, type = 'info') {
+      const container = $('toast-container');
+      const toast = document.createElement('div');
+      toast.className = `toast ${type}`;
+      toast.textContent = message;
+      toast.style.background = '#1a1a2e';
+      toast.style.border = '1px solid rgba(255,255,255,0.08)';
+      toast.style.borderRadius = '10px';
+      toast.style.padding = '12px 18px';
+      toast.style.color = '#fff';
+      toast.style.marginBottom = '10px';
+      toast.style.pointerEvents = 'all';
+      if (type === 'success') toast.style.borderColor = '#10b981';
+      if (type === 'error') toast.style.borderColor = '#ef4444';
+      
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.remove();
+      }, 3000);
+    }
+
+    // Initialize layout
+    const admin = adminCore.requireAdmin();
+    if (admin) {
+      adminCore.initLayout('tournaments');
+      loadTournaments();
+
+      $('filterStatus').addEventListener('change', () => {
+        page = 1;
+        loadTournaments();
+      });
+
+      // Modals setup
+      $('openCreateModalBtn').addEventListener('click', () => $('createModal').classList.add('open'));
+      $('closeCreateModalBtn').addEventListener('click', () => $('createModal').classList.remove('open'));
+      
+      $('closeRoomModalBtn').addEventListener('click', () => $('roomModal').classList.remove('open'));
+      $('closeStatusModalBtn').addEventListener('click', () => $('statusModal').classList.remove('open'));
+
+      // Create Form Submission
+      $('createTournamentForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const submitBtn = $('submitBtn');
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Creating...';
+
+        try {
+          const bannerInput = $('banner');
+          const file = bannerInput.files[0];
+
+          const formData = new FormData();
+          formData.append('title', $('title').value.trim());
+          formData.append('game', $('game').value);
+          formData.append('matchType', $('matchType').value);
+          formData.append('entryFee', $('entryFee').value);
+          formData.append('prizePool', $('prizePool').value);
+          formData.append('perKillReward', $('perKillReward').value);
+          formData.append('booyahReward', $('booyahReward').value);
+          formData.append('totalSlots', $('totalSlots').value);
+          formData.append('rulesText', $('rulesText').value.trim());
+          
+          // Formatted date ISO strings
+          formData.append('matchTime', new Date($('matchTime').value).toISOString());
+          formData.append('registrationEndTime', new Date($('registrationEndTime').value).toISOString());
+
+          if (file) {
+            formData.append('banner', file);
+          }
+
+          await api.upload('/admin/tournaments', formData);
+          showToast('Tournament created successfully!', 'success');
+          
+          $('createTournamentForm').reset();
+          $('createModal').classList.remove('open');
+          await loadTournaments();
+        } catch (err) {
+          console.error(err);
+          showToast(err.message || 'Failed to create tournament.', 'error');
+        } finally {
+          submitBtn.disabled = false;
+          submitBtn.textContent = '🏆 Create Tournament';
+        }
+      });
+
+      // Room Form Submission
+      $('roomDetailsForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const submitBtn = $('submitRoomBtn');
+        submitBtn.disabled = true;
+
+        try {
+          const roomId = $('roomId').value.trim();
+          const roomPassword = $('roomPassword').value.trim();
+          
+          await api.post(`/admin/tournaments/${selectedTournamentId}/room`, { roomId, roomPassword });
+          showToast('Lobby details released to registered players.', 'success');
+          
+          $('roomDetailsForm').reset();
+          $('roomModal').classList.remove('open');
+          await loadTournaments();
+        } catch (err) {
+          showToast(err.message || 'Failed to release room details.', 'error');
+        } finally {
+          submitBtn.disabled = false;
+        }
+      });
+
+      // Status Form Submission
+      $('statusForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const submitBtn = $('submitStatusBtn');
+        submitBtn.disabled = true;
+
+        try {
+          const status = $('newStatus').value;
+          await api.put(`/admin/tournaments/${selectedTournamentId}/status`, { status });
+          showToast('Match status updated.', 'success');
+          
+          $('statusModal').classList.remove('open');
+          await loadTournaments();
+        } catch (err) {
+          showToast(err.message || 'Failed to update status.', 'error');
+        } finally {
+          submitBtn.disabled = false;
+        }
+      });
+    }
+
+    async function loadTournaments() {
+      try {
+        const filterVal = $('filterStatus').value;
+        const res = await api.get('/tournaments', { page, limit: 12, status: filterVal });
+        const data = res.data || res;
+        const list = data.tournaments || [];
+        const pagination = data.pagination || {};
+
+        if (list.length === 0) {
+          $('tournamentsTableBody').innerHTML = `
+            <tr>
+              <td colspan="6" style="text-align: center; color: var(--text-secondary); padding: 32px 0;">
+                No tournaments created yet. Click 'Create Tournament' to add one.
+              </td>
+            </tr>`;
+          $('tournamentsPagination').style.display = 'none';
+          return;
+        }
+
+        let html = '';
+        list.forEach(t => {
+          const formatText = t.match_type.toUpperCase();
+          const gameText = t.game === 'free_fire' ? 'Free Fire' : 'BGMI';
+          
+          const timeStr = new Date(t.match_time).toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+
+          html += `
+            <tr>
+              <td>
+                <div style="font-weight: 700; color: #fff;">${t.title}</div>
+                <div style="font-size: 11px; color: var(--text-secondary); margin-top: 2px;">Starts: ${timeStr}</div>
+              </td>
+              <td>
+                <div style="font-weight: 600;">${gameText}</div>
+                <div style="font-size: 11.5px; color: var(--text-secondary);">${formatText} format</div>
+              </td>
+              <td>
+                <div>Fee: ₹${parseFloat(t.entry_fee).toFixed(0)}</div>
+                <div style="font-size: 11.5px; color: var(--gold); margin-top: 1px;">Prize: ₹${parseFloat(t.prize_pool).toFixed(0)}</div>
+              </td>
+              <td>
+                <div>Slots: ${t.filled_slots} / ${t.total_slots}</div>
+                <div style="font-size: 11px; color: var(--text-secondary); margin-top: 2px;">Filled: ${((t.filled_slots/t.total_slots)*100).toFixed(0)}%</div>
+              </td>
+              <td>
+                <span class="badge badge-pending">${t.status.replace('_', ' ')}</span>
+              </td>
+              <td style="text-align: right;">
+                <div style="display: inline-flex; gap: 8px;">
+                  <button class="btn btn-ghost btn-xs status-btn" data-id="${t.id}" data-status="${t.status}">Status</button>
+                  <button class="btn btn-primary btn-xs room-btn" data-id="${t.id}">Room</button>
+                  <button class="btn btn-primary btn-xs export-btn" data-id="${t.id}">CSV</button>
+                  <button class="btn btn-danger btn-xs delete-btn" data-id="${t.id}">Delete</button>
+                </div>
+              </td>
+            </tr>
+          `;
+        });
+        $('tournamentsTableBody').innerHTML = html;
+
+        // Bind Action Clicks
+        document.querySelectorAll('.status-btn').forEach(btn => {
+          btn.addEventListener('click', () => {
+            selectedTournamentId = btn.dataset.id;
+            $('newStatus').value = btn.dataset.status;
+            $('statusModal').classList.add('open');
+          });
+        });
+
+        document.querySelectorAll('.room-btn').forEach(btn => {
+          btn.addEventListener('click', () => {
+            selectedTournamentId = btn.dataset.id;
+            $('roomModal').classList.add('open');
+          });
+        });
+
+        document.querySelectorAll('.export-btn').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const tid = btn.dataset.id;
+            // Build CSV download url using admin auth token
+            const url = `http://localhost:5000/api/admin/tournaments/${tid}/participants?token=${adminCore.token}`;
+            window.open(url, '_blank');
+          });
+        });
+
+        document.querySelectorAll('.delete-btn').forEach(btn => {
+          btn.addEventListener('click', async () => {
+            const tid = btn.dataset.id;
+            if (confirm('Are you sure you want to permanently delete this tournament? This cannot be undone.')) {
+              try {
+                await api.delete(`/admin/tournaments/${tid}`);
+                showToast('Tournament deleted.', 'success');
+                await loadTournaments();
+              } catch (err) {
+                showToast(err.message || 'Failed to delete tournament.', 'error');
+              }
+            }
+          });
+        });
+
+        // Pagination
+        if (pagination.pages > 1) {
+          $('tournamentsPagination').style.display = 'flex';
+          let pagHtml = '';
+          for (let i = 1; i <= pagination.pages; i++) {
+            pagHtml += `<button class="page-btn ${i === pagination.page ? 'active' : ''}" data-page="${i}">${i}</button>`;
+          }
+          $('tournamentsPagination').innerHTML = pagHtml;
+
+          $('tournamentsPagination').querySelectorAll('.page-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+              page = parseInt(btn.dataset.page, 10);
+              await loadTournaments();
+            });
+          });
+        } else {
+          $('tournamentsPagination').style.display = 'none';
+        }
+
+      } catch (err) {
+        console.error(err);
+        showToast('Failed to load tournaments list.', 'error');
+      }
+    }
+  </script>
+</body>
+</html>

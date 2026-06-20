@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="description" content="Manage your ArenaX wallet – deposit, withdraw, and track transactions." />
+  <meta name="theme-color" content="#0a0a0f" />
+  <title>Wallet - ArenaX</title>
+  <link rel="manifest" href="/manifest.json" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0a0a0f;
+      --bg2:       #11111a;
+      --bg3:       #1a1a2e;
+      --surface:   rgba(255,255,255,0.04);
+      --border:    rgba(255,255,255,0.08);
+      --accent:    #7c3aed;
+      --accent2:   #a855f7;
+      --gold:      #f59e0b;
+      --green:     #10b981;
+      --red:       #ef4444;
+      --text:      #f1f5f9;
+      --muted:     #64748b;
+      --radius:    16px;
+      --nav-h:     72px;
+    }
+
+    html, body { height: 100%; background: var(--bg); color: var(--text); font-family: 'Outfit', sans-serif; }
+
+    body { overflow-x: hidden; padding-bottom: calc(var(--nav-h) + 16px); }
+
+    /* ──── TOAST ──── */
+    #toast-container { position: fixed; top: 20px; right: 16px; left: 16px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; pointer-events: none; }
+    .toast { background: var(--bg3); border: 1px solid var(--border); border-radius: 12px; padding: 14px 18px; font-size: 14px; font-weight: 500; display: flex; align-items: center; gap: 10px; box-shadow: 0 8px 32px rgba(0,0,0,0.5); pointer-events: all; animation: slideIn .3s ease; }
+    .toast.success { border-color: var(--green); }
+    .toast.error   { border-color: var(--red); }
+    .toast.info    { border-color: var(--accent2); }
+    @keyframes slideIn { from { opacity:0; transform:translateY(-12px); } to { opacity:1; transform:translateY(0); } }
+    @keyframes fadeOut { from { opacity:1; } to { opacity:0; transform:translateY(-8px); } }
+
+    /* ──── HEADER ──── */
+    .page-header { padding: 20px 20px 0; display: flex; align-items: center; justify-content: space-between; }
+    .page-header h1 { font-size: 22px; font-weight: 700; }
+    .header-icon { width: 38px; height: 38px; border-radius: 50%; background: var(--surface); border: 1px solid var(--border); display: grid; place-items: center; font-size: 18px; cursor: pointer; }
+
+    /* ──── BALANCE CARD ──── */
+    .balance-wrap { padding: 20px; }
+    .balance-card {
+      position: relative; border-radius: 24px; padding: 28px 24px 24px;
+      background: linear-gradient(135deg, #1e1040 0%, #0f0728 50%, #1a0a3d 100%);
+      overflow: hidden;
+    }
+    .balance-card::before {
+      content: ''; position: absolute; inset: -2px; border-radius: 26px;
+      background: linear-gradient(135deg, #7c3aed, #a855f7, #ec4899, #7c3aed);
+      background-size: 300% 300%;
+      animation: gradientShift 4s ease infinite;
+      z-index: 0;
+    }
+    .balance-card::after {
+      content: ''; position: absolute; inset: 1px; border-radius: 23px;
+      background: linear-gradient(135deg, #1e1040, #0f0728, #1a0a3d);
+      z-index: 0;
+    }
+    @keyframes gradientShift {
+      0%   { background-position: 0% 50%; }
+      50%  { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+    .balance-inner { position: relative; z-index: 1; }
+    .balance-label { font-size: 12px; font-weight: 500; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+    .balance-amount { font-size: 42px; font-weight: 800; background: linear-gradient(135deg, #fff 30%, #c4b5fd); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; line-height: 1; }
+    .balance-user { font-size: 14px; color: rgba(255,255,255,0.55); margin-top: 8px; }
+    .balance-dots { position: absolute; top: -20px; right: -20px; width: 120px; height: 120px; border-radius: 50%; background: radial-gradient(circle, rgba(168,85,247,0.3) 0%, transparent 70%); pointer-events: none; }
+
+    /* ──── QUICK ACTIONS ──── */
+    .quick-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 0 20px 20px; }
+    .btn-action {
+      padding: 14px; border-radius: 14px; border: none; cursor: pointer;
+      font-family: 'Outfit', sans-serif; font-size: 15px; font-weight: 600;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      transition: all .2s ease; position: relative; overflow: hidden;
+    }
+    .btn-deposit { background: linear-gradient(135deg, var(--accent), var(--accent2)); color: #fff; }
+    .btn-deposit:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(124,58,237,0.4); }
+    .btn-withdraw { background: var(--surface); border: 1px solid var(--border); color: var(--text); }
+    .btn-withdraw:hover { border-color: var(--accent2); background: rgba(168,85,247,0.1); }
+
+    /* ──── TABS ──── */
+    .tabs-wrap { padding: 0 20px 4px; }
+    .tabs { display: flex; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 4px; gap: 4px; }
+    .tab-btn { flex: 1; padding: 9px 4px; border: none; background: transparent; color: var(--muted); font-family: 'Outfit', sans-serif; font-size: 13px; font-weight: 600; border-radius: 9px; cursor: pointer; transition: all .2s; white-space: nowrap; }
+    .tab-btn.active { background: linear-gradient(135deg, var(--accent), var(--accent2)); color: #fff; }
+
+    /* ──── SECTION ──── */
+    .section { padding: 12px 20px; }
+    .section-empty { text-align: center; padding: 48px 20px; color: var(--muted); }
+    .section-empty .empty-icon { font-size: 40px; margin-bottom: 12px; }
+    .section-empty p { font-size: 14px; }
+
+    /* ──── TRANSACTION CARD ──── */
+    .card-transaction {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+      padding: 14px 16px; margin-bottom: 10px; display: flex; align-items: center; gap: 14px;
+    }
+    .txn-icon { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; font-size: 18px; flex-shrink: 0; }
+    .txn-icon.credit { background: rgba(16,185,129,0.15); border: 1px solid rgba(16,185,129,0.2); }
+    .txn-icon.debit  { background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.2); }
+    .txn-body { flex: 1; min-width: 0; }
+    .txn-category { font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .txn-date { font-size: 12px; color: var(--muted); margin-top: 2px; }
+    .txn-amount { font-size: 16px; font-weight: 700; white-space: nowrap; }
+    .txn-amount.credit { color: var(--green); }
+    .txn-amount.debit  { color: var(--red); }
+
+    /* ──── STATUS BADGE ──── */
+    .badge { display: inline-flex; align-items: center; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; }
+    .badge-pending  { background: rgba(245,158,11,0.15); color: #f59e0b; border: 1px solid rgba(245,158,11,0.3); }
+    .badge-approved { background: rgba(16,185,129,0.15); color: var(--green); border: 1px solid rgba(16,185,129,0.3); }
+    .badge-rejected { background: rgba(239,68,68,0.15); color: var(--red); border: 1px solid rgba(239,68,68,0.3); }
+    .badge-completed{ background: rgba(16,185,129,0.15); color: var(--green); border: 1px solid rgba(16,185,129,0.3); }
+
+    /* ──── PAYMENT / WITHDRAWAL CARD ──── */
+    .card-payment {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+      padding: 16px; margin-bottom: 10px;
+    }
+    .card-payment-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+    .card-payment-amount { font-size: 18px; font-weight: 700; }
+    .card-payment-meta { font-size: 12px; color: var(--muted); margin-top: 4px; }
+
+    /* ──── PAGINATION ──── */
+    .pagination { display: flex; justify-content: center; gap: 8px; padding: 16px 0; }
+    .page-btn { width: 36px; height: 36px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font-family: 'Outfit', sans-serif; font-size: 14px; cursor: pointer; transition: all .2s; display: grid; place-items: center; }
+    .page-btn.active { background: var(--accent); border-color: var(--accent); }
+    .page-btn:hover:not(.active) { border-color: var(--accent2); }
+
+    /* ──── MODAL ──── */
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(6px); z-index: 1000; display: none; align-items: flex-end; }
+    .modal-overlay.open { display: flex; }
+    .modal { background: var(--bg2); border-radius: 24px 24px 0 0; border-top: 1px solid var(--border); padding: 24px 24px 40px; width: 100%; max-height: 92vh; overflow-y: auto; animation: slideUp .3s ease; }
+    @keyframes slideUp { from { transform:translateY(100%); } to { transform:translateY(0); } }
+    .modal-handle { width: 36px; height: 4px; background: var(--border); border-radius: 2px; margin: 0 auto 20px; }
+    .modal-title { font-size: 20px; font-weight: 700; margin-bottom: 20px; }
+    .modal-close { position: absolute; top: 20px; right: 20px; width: 32px; height: 32px; border-radius: 50%; background: var(--surface); border: 1px solid var(--border); color: var(--text); font-size: 16px; cursor: pointer; display: grid; place-items: center; }
+
+    /* ──── FORM ──── */
+    .form-group { margin-bottom: 18px; }
+    .form-label { font-size: 13px; font-weight: 600; color: var(--muted); margin-bottom: 8px; display: block; text-transform: uppercase; letter-spacing: .5px; }
+    .form-input {
+      width: 100%; padding: 14px 16px; border-radius: 12px;
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--text); font-family: 'Outfit', sans-serif; font-size: 16px;
+      transition: border-color .2s;
+    }
+    .form-input:focus { outline: none; border-color: var(--accent2); }
+    .form-input::placeholder { color: var(--muted); }
+    .form-hint { font-size: 12px; color: var(--muted); margin-top: 6px; }
+
+    .btn-primary {
+      width: 100%; padding: 16px; border-radius: 14px; border: none;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: #fff; font-family: 'Outfit', sans-serif; font-size: 16px; font-weight: 700;
+      cursor: pointer; transition: all .2s; margin-top: 8px;
+      display: flex; align-items: center; justify-content: center; gap: 10px;
+    }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(124,58,237,0.45); }
+    .btn-primary:disabled { opacity: .6; cursor: not-allowed; transform: none; }
+
+    /* ──── STEP INDICATOR ──── */
+    .step-indicator { display: flex; align-items: center; gap: 8px; margin-bottom: 24px; }
+    .step-dot { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; font-size: 13px; font-weight: 700; border: 2px solid var(--border); color: var(--muted); transition: all .3s; }
+    .step-dot.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .step-dot.done   { background: var(--green); border-color: var(--green); color: #fff; }
+    .step-line { flex: 1; height: 2px; background: var(--border); border-radius: 1px; transition: background .3s; }
+    .step-line.done { background: var(--green); }
+
+    /* ──── UPI BOX ──── */
+    .upi-box { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 20px; text-align: center; margin-bottom: 16px; }
+    .upi-id-display { font-size: 18px; font-weight: 700; color: var(--accent2); margin-bottom: 16px; letter-spacing: .5px; }
+    .qr-img { width: 180px; height: 180px; border-radius: 12px; object-fit: contain; background: #fff; padding: 8px; margin: 0 auto 12px; display: block; }
+    .amount-highlight { font-size: 22px; font-weight: 800; color: var(--gold); margin-bottom: 4px; }
+
+    /* ──── FILE UPLOAD ──── */
+    .file-upload-area {
+      border: 2px dashed var(--border); border-radius: 12px; padding: 24px; text-align: center;
+      cursor: pointer; transition: border-color .2s; position: relative;
+    }
+    .file-upload-area:hover { border-color: var(--accent2); }
+    .file-upload-area input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+    .file-upload-icon { font-size: 28px; margin-bottom: 8px; }
+    .file-upload-text { font-size: 14px; color: var(--muted); }
+    .file-preview { font-size: 13px; color: var(--accent2); margin-top: 8px; font-weight: 500; }
+
+    /* ──── SPINNER ──── */
+    .spinner { width: 18px; height: 18px; border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin .7s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ──── SKELETON ──── */
+    .skeleton { background: linear-gradient(90deg, var(--surface) 25%, rgba(255,255,255,0.06) 50%, var(--surface) 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; border-radius: 10px; }
+    @keyframes shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+    .skel-card { height: 80px; margin-bottom: 10px; border-radius: 14px; }
+
+    /* ──── BOTTOM NAV ──── */
+    .bottom-nav {
+      position: fixed; bottom: 0; left: 0; right: 0; height: var(--nav-h);
+      background: rgba(17,17,26,0.9); backdrop-filter: blur(16px);
+      border-top: 1px solid var(--border); display: flex; z-index: 500;
+    }
+    .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; text-decoration: none; color: var(--muted); font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; transition: color .2s; cursor: pointer; }
+    .nav-item .nav-icon { font-size: 22px; transition: transform .2s; }
+    .nav-item.active { color: var(--accent2); }
+    .nav-item.active .nav-icon { transform: scale(1.1); }
+    .nav-item:hover { color: var(--text); }
+
+    /* ──── LOADING OVERLAY ──── */
+    #loading-overlay { position: fixed; inset: 0; background: var(--bg); display: grid; place-items: center; z-index: 9998; transition: opacity .4s; }
+    #loading-overlay.hidden { opacity: 0; pointer-events: none; }
+    .loader-logo { font-size: 36px; font-weight: 800; background: linear-gradient(135deg, var(--accent), var(--accent2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+
+    /* RESPONSIVE */
+    @media (min-width: 480px) {
+      .modal { max-width: 480px; margin: 0 auto; border-radius: 24px; }
+      .modal-overlay { align-items: center; padding: 20px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Loading overlay -->
+<div id="loading-overlay">
+  <div>
+    <div class="loader-logo">ArenaX</div>
+    <div style="text-align:center;margin-top:12px;color:var(--muted);font-size:14px;">Loading wallet…</div>
+  </div>
+</div>
+
+<!-- Toast container -->
+<div id="toast-container"></div>
+
+<!-- PAGE HEADER -->
+<div class="page-header">
+  <h1>💰 Wallet</h1>
+  <div class="header-icon" onclick="refreshWallet()" title="Refresh">🔄</div>
+</div>
+
+<!-- BALANCE CARD -->
+<div class="balance-wrap">
+  <div class="balance-card">
+    <div class="balance-dots"></div>
+    <div class="balance-inner">
+      <div class="balance-label">Available Balance</div>
+      <div class="balance-amount" id="balance-amount">₹0.00</div>
+      <div class="balance-user" id="balance-user">Loading…</div>
+    </div>
+  </div>
+</div>
+
+<!-- QUICK ACTIONS -->
+<div class="quick-actions">
+  <button class="btn-action btn-deposit" id="btn-deposit-open" onclick="openDepositModal()">
+    <span>＋</span> Deposit
+  </button>
+  <button class="btn-action btn-withdraw" id="btn-withdraw-open" onclick="openWithdrawModal()">
+    Withdraw <span>→</span>
+  </button>
+</div>
+
+<!-- TABS -->
+<div class="tabs-wrap">
+  <div class="tabs">
+    <button class="tab-btn active" id="tab-transactions" onclick="switchTab('transactions')">Transactions</button>
+    <button class="tab-btn" id="tab-payments" onclick="switchTab('payments')">Payments</button>
+    <button class="tab-btn" id="tab-withdrawals" onclick="switchTab('withdrawals')">Withdrawals</button>
+  </div>
+</div>
+
+<!-- TAB CONTENT -->
+<div class="section" id="content-transactions">
+  <div id="txn-list"></div>
+  <div id="txn-pagination" class="pagination"></div>
+</div>
+
+<div class="section" id="content-payments" style="display:none">
+  <div id="payments-list"></div>
+</div>
+
+<div class="section" id="content-withdrawals" style="display:none">
+  <div id="withdrawals-list"></div>
+</div>
+
+<!-- ===================== DEPOSIT MODAL ===================== -->
+<div class="modal-overlay" id="deposit-modal">
+  <div class="modal" style="position:relative">
+    <div class="modal-handle"></div>
+    <button class="modal-close" onclick="closeDepositModal()">✕</button>
+    <div class="modal-title">Deposit Funds</div>
+
+    <!-- Step indicator -->
+    <div class="step-indicator">
+      <div class="step-dot active" id="step-dot-1">1</div>
+      <div class="step-line" id="step-line-1"></div>
+      <div class="step-dot" id="step-dot-2">2</div>
+      <div class="step-line" id="step-line-2"></div>
+      <div class="step-dot" id="step-dot-3">3</div>
+    </div>
+
+    <!-- Step 1: Amount -->
+    <div id="deposit-step-1">
+      <div class="form-group">
+        <label class="form-label">Enter Amount (₹)</label>
+        <input type="number" class="form-input" id="deposit-amount" placeholder="e.g. 500" min="50" max="10000" />
+        <div class="form-hint">Min ₹50 · Max ₹10,000</div>
+      </div>
+      <button class="btn-primary" id="btn-step1-next" onclick="depositStep1Next()">
+        Next <span>→</span>
+      </button>
+    </div>
+
+    <!-- Step 2: UPI Payment -->
+    <div id="deposit-step-2" style="display:none">
+      <div class="upi-box">
+        <div class="amount-highlight" id="pay-amount-display">₹0</div>
+        <div style="font-size:13px;color:var(--muted);margin-bottom:14px">Pay this exact amount via UPI</div>
+        <img class="qr-img" id="qr-img" src="" alt="QR Code" />
+        <div class="upi-id-display" id="upi-id-display">Loading…</div>
+      </div>
+      <div style="background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.3);border-radius:12px;padding:14px;font-size:13px;color:#f59e0b;margin-bottom:16px;">
+        ⚠️ Pay the exact amount. Do not close this page.
+      </div>
+      <button class="btn-primary" onclick="depositStep2Next()">
+        ✅ I've Paid
+      </button>
+    </div>
+
+    <!-- Step 3: UTR + Screenshot -->
+    <div id="deposit-step-3" style="display:none">
+      <div class="form-group">
+        <label class="form-label">UTR / Transaction ID</label>
+        <input type="text" class="form-input" id="utr-input" placeholder="Enter 12-digit UTR number" />
+        <div class="form-hint">Find this in your UPI payment confirmation</div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Payment Screenshot</label>
+        <div class="file-upload-area" id="screenshot-drop">
+          <input type="file" id="screenshot-input" accept="image/*" onchange="handleScreenshotChange(this)" />
+          <div class="file-upload-icon">📸</div>
+          <div class="file-upload-text">Tap to upload screenshot</div>
+          <div class="file-preview" id="file-preview-name"></div>
+        </div>
+      </div>
+      <button class="btn-primary" id="btn-submit-payment" onclick="submitPayment()">
+        <span id="submit-payment-label">Submit Payment</span>
+        <div id="submit-payment-spinner" style="display:none" class="spinner"></div>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== WITHDRAW MODAL ===================== -->
+<div class="modal-overlay" id="withdraw-modal">
+  <div class="modal" style="position:relative">
+    <div class="modal-handle"></div>
+    <button class="modal-close" onclick="closeWithdrawModal()">✕</button>
+    <div class="modal-title">Withdraw Funds</div>
+
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:20px;display:flex;justify-content:space-between;align-items:center;">
+      <span style="font-size:13px;color:var(--muted)">Available Balance</span>
+      <span style="font-size:18px;font-weight:700" id="wd-balance-display">₹0.00</span>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Your UPI ID</label>
+      <input type="text" class="form-input" id="wd-upi-input" placeholder="yourname@upi" />
+    </div>
+    <div class="form-group">
+      <label class="form-label">Amount (₹)</label>
+      <input type="number" class="form-input" id="wd-amount-input" placeholder="e.g. 500" min="100" max="50000" />
+      <div class="form-hint">Min ₹100 · Max ₹50,000 · Processing 1-3 business days</div>
+    </div>
+    <button class="btn-primary" id="btn-request-wd" onclick="submitWithdrawal()">
+      <span id="wd-label">Request Withdrawal</span>
+      <div id="wd-spinner" style="display:none" class="spinner"></div>
+    </button>
+  </div>
+</div>
+
+<!-- BOTTOM NAV -->
+<nav class="bottom-nav">
+  <a class="nav-item" href="/public/index.html">
+    <span class="nav-icon">🏠</span><span>Home</span>
+  </a>
+  <a class="nav-item" href="/public/tournaments/index.html">
+    <span class="nav-icon">🏆</span><span>Tournaments</span>
+  </a>
+  <a class="nav-item" href="/public/leaderboard/index.html">
+    <span class="nav-icon">📊</span><span>Ranks</span>
+  </a>
+  <a class="nav-item active" href="/public/wallet/index.html">
+    <span class="nav-icon">💰</span><span>Wallet</span>
+  </a>
+  <a class="nav-item" href="/public/profile/index.html">
+    <span class="nav-icon">👤</span><span>Profile</span>
+  </a>
+</nav>
+
+<script type="module">
+  import { api } from '../../assets/js/api.js';
+  import { auth } from '../../assets/js/auth.js';
+  import { toast } from '../../assets/js/notifications.js';
+
+  // ── Expose helpers to global scope (onclick handlers) ──
+  window.openDepositModal  = openDepositModal;
+  window.closeDepositModal = closeDepositModal;
+  window.openWithdrawModal = openWithdrawModal;
+  window.closeWithdrawModal= closeWithdrawModal;
+  window.switchTab         = switchTab;
+  window.depositStep1Next  = depositStep1Next;
+  window.depositStep2Next  = depositStep2Next;
+  window.handleScreenshotChange = handleScreenshotChange;
+  window.submitPayment     = submitPayment;
+  window.submitWithdrawal  = submitWithdrawal;
+  window.refreshWallet     = refreshWallet;
+
+  // ── State ──
+  let currentTab  = 'transactions';
+  let txnPage     = 1;
+  let totalTxnPages = 1;
+  let depositAmount = 0;
+  let settings    = {};
+  let walletData  = {};
+
+  // ── Auth guard ──
+  auth.requireAuth();
+
+  // ── Boot ──
+  async function init() {
+    try {
+      await Promise.all([
+        fetchWallet(),
+        fetchSettings(),
+        fetchTransactions(1),
+      ]);
+    } catch (e) {
+      toast('Failed to load wallet data', 'error');
+    } finally {
+      document.getElementById('loading-overlay').classList.add('hidden');
+    }
+  }
+
+  async function fetchWallet() {
+    const res = await api.get('/api/wallet');
+    walletData = res.data;
+    const bal = parseFloat(walletData.balance || 0).toFixed(2);
+    document.getElementById('balance-amount').textContent = `₹${bal}`;
+    document.getElementById('balance-user').textContent = auth.user?.username || '';
+    document.getElementById('wd-balance-display').textContent = `₹${bal}`;
+  }
+
+  async function fetchSettings() {
+    try {
+      const res = await api.get('/api/settings/public');
+      settings = res.data || {};
+    } catch { settings = {}; }
+  }
+
+  window.refreshWallet = async function() {
+    await fetchWallet();
+    toast('Balance refreshed', 'success');
+  };
+
+  // ── TABS ──
+  function switchTab(tab) {
+    currentTab = tab;
+    ['transactions','payments','withdrawals'].forEach(t => {
+      document.getElementById(`tab-${t}`).classList.toggle('active', t === tab);
+      document.getElementById(`content-${t}`).style.display = t === tab ? '' : 'none';
+    });
+    if (tab === 'transactions' && !document.getElementById('txn-list').children.length) fetchTransactions(1);
+    if (tab === 'payments')    fetchPayments();
+    if (tab === 'withdrawals') fetchWithdrawals();
+  }
+
+  // ── TRANSACTIONS ──
+  async function fetchTransactions(page) {
+    const list = document.getElementById('txn-list');
+    list.innerHTML = renderSkeletons(5);
+    try {
+      const res = await api.get(`/api/wallet/transactions?page=${page}&limit=10`);
+      const { transactions = [], pagination = {} } = res.data;
+      totalTxnPages = pagination.totalPages || 1;
+      txnPage       = pagination.page || page;
+      list.innerHTML = transactions.length ? transactions.map(renderTxn).join('') : emptyState('📭','No transactions yet');
+      renderPagination('txn-pagination', txnPage, totalTxnPages, (p) => fetchTransactions(p));
+    } catch(e) {
+      list.innerHTML = emptyState('⚠️', 'Failed to load transactions');
+    }
+  }
+
+  function renderTxn(t) {
+    const isCredit = t.type === 'credit';
+    const icon     = isCredit ? '⬇️' : '⬆️';
+    const cls      = isCredit ? 'credit' : 'debit';
+    const sign     = isCredit ? '+' : '-';
+    const date     = new Date(t.created_at).toLocaleDateString('en-IN',{ day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' });
+    return `
+      <div class="card-transaction">
+        <div class="txn-icon ${cls}">${icon}</div>
+        <div class="txn-body">
+          <div class="txn-category">${escHtml(t.category || t.description || 'Transaction')}</div>
+          <div class="txn-date">${date}</div>
+        </div>
+        <div class="txn-amount ${cls}">${sign}₹${parseFloat(t.amount).toFixed(2)}</div>
+      </div>`;
+  }
+
+  // ── PAYMENTS ──
+  async function fetchPayments() {
+    const list = document.getElementById('payments-list');
+    list.innerHTML = renderSkeletons(3);
+    try {
+      const res = await api.get('/api/payments/my-payments');
+      const payments = res.data?.payments || res.data || [];
+      list.innerHTML = payments.length ? payments.map(renderPayment).join('') : emptyState('💳','No deposits yet');
+    } catch(e) {
+      list.innerHTML = emptyState('⚠️', 'Failed to load payments');
+    }
+  }
+
+  function renderPayment(p) {
+    const date = new Date(p.created_at).toLocaleDateString('en-IN',{ day:'2-digit', month:'short', year:'numeric' });
+    const cls  = { pending:'badge-pending', approved:'badge-approved', rejected:'badge-rejected' }[p.status] || 'badge-pending';
+    return `
+      <div class="card-payment">
+        <div class="card-payment-top">
+          <div>
+            <div class="card-payment-amount">₹${parseFloat(p.amount).toFixed(2)}</div>
+            <div class="card-payment-meta">UTR: ${escHtml(p.utr_number || '—')}</div>
+          </div>
+          <div class="badge ${cls}">${p.status}</div>
+        </div>
+        <div class="card-payment-meta">Submitted ${date}</div>
+      </div>`;
+  }
+
+  // ── WITHDRAWALS ──
+  async function fetchWithdrawals() {
+    const list = document.getElementById('withdrawals-list');
+    list.innerHTML = renderSkeletons(3);
+    try {
+      const res = await api.get('/api/withdrawals/my-withdrawals');
+      const wds = res.data?.withdrawals || res.data || [];
+      list.innerHTML = wds.length ? wds.map(renderWithdrawal).join('') : emptyState('🏧','No withdrawals yet');
+    } catch(e) {
+      list.innerHTML = emptyState('⚠️', 'Failed to load withdrawals');
+    }
+  }
+
+  function renderWithdrawal(w) {
+    const date = new Date(w.created_at).toLocaleDateString('en-IN',{ day:'2-digit', month:'short', year:'numeric' });
+    const cls  = { pending:'badge-pending', approved:'badge-approved', completed:'badge-completed', rejected:'badge-rejected' }[w.status] || 'badge-pending';
+    return `
+      <div class="card-payment">
+        <div class="card-payment-top">
+          <div>
+            <div class="card-payment-amount">₹${parseFloat(w.amount).toFixed(2)}</div>
+            <div class="card-payment-meta">UPI: ${escHtml(w.upi_id || '—')}</div>
+          </div>
+          <div class="badge ${cls}">${w.status}</div>
+        </div>
+        <div class="card-payment-meta">Requested ${date}</div>
+      </div>`;
+  }
+
+  // ── PAGINATION ──
+  function renderPagination(containerId, current, total, onPage) {
+    const el = document.getElementById(containerId);
+    if (total <= 1) { el.innerHTML = ''; return; }
+    let html = '';
+    for (let i = 1; i <= total; i++) {
+      html += `<button class="page-btn${i===current?' active':''}" onclick="(${onPage.toString()})(${i})">${i}</button>`;
+    }
+    el.innerHTML = html;
+  }
+
+  // ── DEPOSIT MODAL ──
+  function openDepositModal() {
+    document.getElementById('deposit-modal').classList.add('open');
+    setDepositStep(1);
+  }
+  function closeDepositModal() {
+    document.getElementById('deposit-modal').classList.remove('open');
+    document.getElementById('deposit-amount').value = '';
+    document.getElementById('utr-input').value = '';
+    document.getElementById('screenshot-input').value = '';
+    document.getElementById('file-preview-name').textContent = '';
+    setDepositStep(1);
+  }
+
+  function setDepositStep(step) {
+    [1,2,3].forEach(s => {
+      document.getElementById(`deposit-step-${s}`).style.display = s === step ? '' : 'none';
+      const dot = document.getElementById(`step-dot-${s}`);
+      dot.className = 'step-dot' + (s < step ? ' done' : s === step ? ' active' : '');
+    });
+    [1,2].forEach(s => {
+      const line = document.getElementById(`step-line-${s}`);
+      line.className = 'step-line' + (s < step ? ' done' : '');
+    });
+  }
+
+  function depositStep1Next() {
+    const amt = parseFloat(document.getElementById('deposit-amount').value);
+    if (!amt || amt < 50)   { toast('Minimum deposit is ₹50', 'error'); return; }
+    if (amt > 10000)        { toast('Maximum deposit is ₹10,000', 'error'); return; }
+    depositAmount = amt;
+    document.getElementById('pay-amount-display').textContent = `₹${amt}`;
+    document.getElementById('upi-id-display').textContent = settings.upi_id || 'Loading…';
+    const qr = document.getElementById('qr-img');
+    if (settings.qr_code_url) { qr.src = settings.qr_code_url; qr.style.display = ''; }
+    else { qr.style.display = 'none'; }
+    setDepositStep(2);
+  }
+
+  function depositStep2Next() {
+    setDepositStep(3);
+  }
+
+  function handleScreenshotChange(input) {
+    const file = input.files[0];
+    document.getElementById('file-preview-name').textContent = file ? `📎 ${file.name}` : '';
+  }
+
+  async function submitPayment() {
+    const utr        = document.getElementById('utr-input').value.trim();
+    const screenshot = document.getElementById('screenshot-input').files[0];
+    if (!utr)        { toast('Please enter your UTR number', 'error'); return; }
+    if (!screenshot) { toast('Please upload payment screenshot', 'error'); return; }
+
+    const btn = document.getElementById('btn-submit-payment');
+    setLoading(btn, 'submit-payment-label', 'submit-payment-spinner', true);
+
+    try {
+      const form = new FormData();
+      form.append('amount', depositAmount);
+      form.append('utr_number', utr);
+      form.append('screenshot', screenshot);
+      await api.postForm('/api/payments/submit', form);
+      toast('Payment submitted! We'll verify within 24 hours.', 'success');
+      closeDepositModal();
+      await fetchWallet();
+      if (currentTab === 'payments') fetchPayments();
+    } catch(e) {
+      toast(e?.message || 'Submission failed. Try again.', 'error');
+    } finally {
+      setLoading(btn, 'submit-payment-label', 'submit-payment-spinner', false);
+    }
+  }
+
+  // ── WITHDRAW MODAL ──
+  function openWithdrawModal() {
+    document.getElementById('withdraw-modal').classList.add('open');
+  }
+  function closeWithdrawModal() {
+    document.getElementById('withdraw-modal').classList.remove('open');
+    document.getElementById('wd-upi-input').value = '';
+    document.getElementById('wd-amount-input').value = '';
+  }
+
+  async function submitWithdrawal() {
+    const upi_id = document.getElementById('wd-upi-input').value.trim();
+    const amount = parseFloat(document.getElementById('wd-amount-input').value);
+    if (!upi_id)       { toast('Please enter your UPI ID', 'error'); return; }
+    if (!amount || amount < 100)  { toast('Minimum withdrawal is ₹100', 'error'); return; }
+    if (amount > 50000){ toast('Maximum withdrawal is ₹50,000', 'error'); return; }
+    const bal = parseFloat(walletData.balance || 0);
+    if (amount > bal)  { toast('Insufficient balance', 'error'); return; }
+
+    const btn = document.getElementById('btn-request-wd');
+    setLoading(btn, 'wd-label', 'wd-spinner', true);
+    try {
+      await api.post('/api/withdrawals/request', { upi_id, amount });
+      toast('Withdrawal request submitted!', 'success');
+      closeWithdrawModal();
+      await fetchWallet();
+      if (currentTab === 'withdrawals') fetchWithdrawals();
+    } catch(e) {
+      toast(e?.message || 'Request failed. Try again.', 'error');
+    } finally {
+      setLoading(btn, 'wd-label', 'wd-spinner', false);
+    }
+  }
+
+  // ── HELPERS ──
+  function setLoading(btn, labelId, spinnerId, loading) {
+    btn.disabled = loading;
+    document.getElementById(labelId).style.display  = loading ? 'none' : '';
+    document.getElementById(spinnerId).style.display = loading ? '' : 'none';
+  }
+
+  function renderSkeletons(n) {
+    return Array.from({ length: n }, () => `<div class="skeleton skel-card"></div>`).join('');
+  }
+
+  function emptyState(icon, msg) {
+    return `<div class="section-empty"><div class="empty-icon">${icon}</div><p>${msg}</p></div>`;
+  }
+
+  function escHtml(str) {
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  // ── Close modal on outside click ──
+  document.querySelectorAll('.modal-overlay').forEach(overlay => {
+    overlay.addEventListener('click', e => {
+      if (e.target === overlay) {
+        overlay.classList.remove('open');
+        setDepositStep(1);
+      }
+    });
+  });
+
+  init();
+</script>
+
+<script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw.js').catch(() => {});
+  }
+</script>
+</body>
+</html>

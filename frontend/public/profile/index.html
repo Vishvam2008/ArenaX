@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="description" content="Manage your ArenaX player profile, Free Fire UID, and track game statistics.">
+  <meta name="theme-color" content="#0a0a0f">
+  <title>My Profile - ArenaX</title>
+  <link rel="manifest" href="/manifest.json">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/assets/css/global.css">
+  <link rel="stylesheet" href="/assets/css/components.css">
+  <style>
+    body {
+      padding-top: 60px;
+      padding-bottom: 80px;
+      background-color: var(--bg-primary);
+      min-height: 100vh;
+    }
+
+    .main-container {
+      max-width: 540px;
+      margin: 0 auto;
+      padding: 16px;
+    }
+
+    /* ──── TOAST ──── */
+    #toast-container { position: fixed; top: 20px; right: 16px; left: 16px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; pointer-events: none; }
+    .toast { background: var(--bg-card); border: 1px solid var(--border-glass); border-radius: 12px; padding: 14px 18px; font-size: 14px; font-weight: 500; display: flex; align-items: center; gap: 10px; box-shadow: 0 8px 32px rgba(0,0,0,0.5); pointer-events: all; animation: slideIn .3s ease; }
+    .toast.success { border-color: var(--success); }
+    .toast.error   { border-color: var(--danger); }
+    .toast.info    { border-color: var(--primary); }
+    @keyframes slideIn { from { opacity:0; transform:translateY(-12px); } to { opacity:1; transform:translateY(0); } }
+    @keyframes fadeOut { from { opacity:1; } to { opacity:0; transform:translateY(-8px); } }
+
+    /* Profile Header Box */
+    .profile-card {
+      background: linear-gradient(135deg, rgba(124,58,237,0.12) 0%, rgba(6,182,212,0.06) 100%);
+      border: 1px solid rgba(124,58,237,0.2);
+      border-radius: 20px;
+      padding: 24px;
+      margin-bottom: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      position: relative;
+    }
+
+    .avatar-wrapper {
+      position: relative;
+      margin-bottom: 16px;
+      cursor: pointer;
+    }
+
+    .profile-avatar {
+      width: 96px;
+      height: 96px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-display);
+      font-size: 38px;
+      font-weight: 700;
+      color: white;
+      border: 3px solid rgba(255,255,255,0.15);
+      background-size: cover;
+      background-position: center;
+      transition: all 0.3s ease;
+    }
+
+    .avatar-wrapper:hover .profile-avatar {
+      filter: brightness(0.8);
+    }
+
+    .avatar-upload-overlay {
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      background: rgba(0,0,0,0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      color: #fff;
+      font-weight: 600;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+    }
+
+    .avatar-wrapper:hover .avatar-upload-overlay {
+      opacity: 1;
+    }
+
+    .profile-name {
+      font-family: var(--font-display);
+      font-size: 22px;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .profile-email {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-top: 4px;
+    }
+
+    /* Stats Grid */
+    .stats-card-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+
+    .stat-box {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-glass);
+      border-radius: 16px;
+      padding: 16px;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .stat-box-icon {
+      font-size: 24px;
+      margin-bottom: 8px;
+    }
+
+    .stat-box-value {
+      font-family: var(--font-display);
+      font-size: 20px;
+      font-weight: 800;
+      color: #fff;
+    }
+
+    .stat-box-label {
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-top: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    /* Forms */
+    .form-card {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-glass);
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+
+    .form-card-title {
+      font-family: var(--font-display);
+      font-size: 16px;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 16px;
+    }
+
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    .form-group:last-child {
+      margin-bottom: 0;
+    }
+
+    .form-label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      margin-bottom: 8px;
+    }
+
+    .form-control {
+      width: 100%;
+      background: var(--bg-primary);
+      border: 1px solid var(--border-glass);
+      border-radius: 10px;
+      padding: 12px 14px;
+      color: #fff;
+      font-family: var(--font-body);
+      font-size: 14px;
+      transition: border-color 0.2s;
+    }
+
+    .form-control:focus {
+      outline: none;
+      border-color: var(--primary);
+    }
+
+    .form-control:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .logout-btn-container {
+      margin-top: 24px;
+      padding: 0 8px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top App Navbar -->
+  <nav class="navbar">
+    <a href="/public/dashboard/" class="navbar-logo">ArenaX</a>
+    <div class="navbar-spacer"></div>
+    <div class="navbar-actions">
+      <!-- Notification Bell -->
+      <button class="notification-bell" id="bellBtn" aria-label="Notifications" aria-haspopup="true">
+        🔔
+        <span class="badge badge-danger" id="bellBadge" style="display:none; position:absolute; top:-2px; right:-2px; padding:0.1rem 0.35rem; font-size:9px;">0</span>
+      </button>
+      <div class="notif-dropdown" id="notifDropdown" style="position:fixed; top:54px; right:12px; width:320px; background:var(--bg-secondary); border:1px solid var(--border-glass); border-radius:12px; display:none; flex-direction:column; overflow:hidden; box-shadow:var(--shadow-lg); z-index:var(--z-dropdown);"></div>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="main-container">
+    
+    <!-- Profile Card (Avatar + Basic Info) -->
+    <div class="profile-card">
+      <div class="avatar-wrapper" id="avatarClickArea">
+        <div class="profile-avatar" id="avatarView">U</div>
+        <div class="avatar-upload-overlay">UPLOAD</div>
+        <input type="file" id="avatarInput" accept="image/*" style="display: none;">
+      </div>
+      <h2 class="profile-name" id="profileName">Loading...</h2>
+      <p class="profile-email" id="profileEmail">Loading...</p>
+    </div>
+
+    <!-- Career Stats Grid -->
+    <div class="section-title">
+      <span>Career Statistics</span>
+    </div>
+    <div class="stats-card-grid">
+      <div class="stat-box">
+        <span class="stat-box-icon">🎮</span>
+        <span class="stat-box-value" id="statMatches">0</span>
+        <span class="stat-box-label">Played</span>
+      </div>
+      <div class="stat-box">
+        <span class="stat-box-icon">🏆</span>
+        <span class="stat-box-value" id="statBooyahs">0</span>
+        <span class="stat-box-label">Booyahs</span>
+      </div>
+      <div class="stat-box">
+        <span class="stat-box-icon">☠️</span>
+        <span class="stat-box-value" id="statKills">0</span>
+        <span class="stat-box-label">Kills</span>
+      </div>
+      <div class="stat-box">
+        <span class="stat-box-icon">💰</span>
+        <span class="stat-box-value" id="statEarnings">₹0.00</span>
+        <span class="stat-box-label">Earnings</span>
+      </div>
+    </div>
+
+    <!-- Game & Profile Settings Form -->
+    <div class="form-card">
+      <h3 class="form-card-title">Game & Contact Details</h3>
+      <form id="profileForm">
+        <div class="form-group">
+          <label class="form-label" for="username">Username</label>
+          <input type="text" id="username" class="form-control" disabled>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="phone">Phone Number</label>
+          <input type="tel" id="phone" class="form-control" placeholder="10-digit Mobile Number" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="ffUid">Free Fire UID</label>
+          <input type="text" id="ffUid" class="form-control" placeholder="Free Fire Numerical ID (e.g. 12345678)" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="ffUsername">Free Fire Name</label>
+          <input type="text" id="ffUsername" class="form-control" placeholder="Free Fire In-Game Name" required>
+        </div>
+        <button type="submit" id="saveBtn" class="btn btn-primary w-full mt-4">Save Changes</button>
+      </form>
+    </div>
+
+    <!-- Support Desk Quick Link -->
+    <div class="form-card">
+      <h3 class="form-card-title">Help & Support</h3>
+      <p style="font-size: 13.5px; color: var(--text-secondary); margin-bottom: 16px;">
+        Need help with a payment, match issues or bug reports? Open a ticket directly with our support team.
+      </p>
+      <a href="/public/tickets/" class="btn btn-ghost w-full">🎫 Open Support Tickets</a>
+    </div>
+
+    <!-- Logout Area -->
+    <div class="logout-btn-container">
+      <button id="logoutBtn" class="btn btn-danger w-full">🚪 Logout Account</button>
+    </div>
+
+  </main>
+
+  <!-- Bottom Navigation Bar -->
+  <nav class="bottom-nav">
+    <a href="/public/dashboard/" class="bottom-nav-item">
+      <span class="nav-icon">🏠</span>
+      <span class="nav-label">Home</span>
+    </a>
+    <a href="/public/tournaments/" class="bottom-nav-item">
+      <span class="nav-icon">🏆</span>
+      <span class="nav-label">Matches</span>
+    </a>
+    <a href="/public/wallet/" class="bottom-nav-item">
+      <span class="nav-icon">💳</span>
+      <span class="nav-label">Wallet</span>
+    </a>
+    <a href="/public/profile/" class="bottom-nav-item active">
+      <span class="nav-icon">👤</span>
+      <span class="nav-label">Profile</span>
+    </a>
+  </nav>
+
+  <!-- Toast Container -->
+  <div id="toast-container"></div>
+
+  <script type="module">
+    import { api } from '/assets/js/api.js';
+    import { auth } from '/assets/js/auth.js';
+    import { NotificationManager } from '/assets/js/notifications.js';
+
+    const $ = id => document.getElementById(id);
+
+    // Toast alerts helper
+    function showToast(message, type = 'info') {
+      const container = $('toast-container');
+      const toast = document.createElement('div');
+      toast.className = `toast ${type}`;
+      toast.textContent = message;
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.style.animation = 'fadeOut 0.3s ease forwards';
+        setTimeout(() => toast.remove(), 300);
+      }, 3000);
+    }
+
+    // App Initialization
+    (async () => {
+      await auth.init();
+      const user = auth.requireAuth();
+      if (!user) return;
+
+      // Init notification system
+      const notifMgr = new NotificationManager($('bellBtn'), $('bellBadge'), $('notifDropdown'));
+      notifMgr.init();
+
+      // Load data
+      await loadProfileData();
+
+      // Handle Form Submit
+      $('profileForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const saveBtn = $('saveBtn');
+        saveBtn.disabled = true;
+        saveBtn.textContent = 'Saving...';
+
+        try {
+          const body = {
+            phone: $('phone').value.trim(),
+            ff_uid: $('ffUid').value.trim(),
+            ff_username: $('ffUsername').value.trim()
+          };
+
+          const res = await api.put('/users/profile', body);
+          const updatedUser = res.data || res;
+          
+          auth.updateUser(updatedUser);
+          showToast('Profile updated successfully!', 'success');
+        } catch (err) {
+          console.error(err);
+          showToast(err.message || 'Failed to update profile.', 'error');
+        } finally {
+          saveBtn.disabled = false;
+          saveBtn.textContent = 'Save Changes';
+        }
+      });
+
+      // Handle Avatar upload triggers
+      $('avatarClickArea').addEventListener('click', () => {
+        $('avatarInput').click();
+      });
+
+      $('avatarInput').addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        if (file.size > 5 * 1024 * 1024) {
+          showToast('File size must be less than 5MB.', 'error');
+          return;
+        }
+
+        const formData = new FormData();
+        formData.append('avatar', file);
+
+        showToast('Uploading avatar...', 'info');
+        try {
+          const res = await api.upload('/users/avatar', formData);
+          const updated = res.data || res;
+
+          auth.updateUser({ avatar_url: updated.avatar_url });
+          updateAvatarView(updated.avatar_url, updated.username || user.username);
+          showToast('Avatar updated successfully!', 'success');
+        } catch (err) {
+          console.error(err);
+          showToast(err.message || 'Failed to upload avatar.', 'error');
+        }
+      });
+
+      // Logout handler
+      $('logoutBtn').addEventListener('click', async () => {
+        if (confirm('Are you sure you want to log out?')) {
+          await auth.logout();
+        }
+      });
+    })();
+
+    async function loadProfileData() {
+      try {
+        const res = await api.get('/users/profile');
+        const profile = res.data || res;
+
+        // Set inputs
+        $('username').value = profile.username || '';
+        $('phone').value = profile.phone || '';
+        $('ffUid').value = profile.ff_uid || '';
+        $('ffUsername').value = profile.ff_username || '';
+
+        // Header info
+        $('profileName').textContent = profile.username;
+        $('profileEmail').textContent = profile.email;
+
+        // Avatar
+        updateAvatarView(profile.avatar_url, profile.username);
+
+        // Stats
+        const stats = profile.stats || {};
+        $('statMatches').textContent = stats.matches_played || 0;
+        $('statBooyahs').textContent = stats.booyahs || 0;
+        $('statKills').textContent = stats.total_kills || 0;
+        $('statEarnings').textContent = `₹${parseFloat(stats.total_earnings || 0).toFixed(2)}`;
+
+      } catch (err) {
+        console.error(err);
+        showToast('Failed to load profile details.', 'error');
+      }
+    }
+
+    function updateAvatarView(url, username) {
+      const view = $('avatarView');
+      if (url) {
+        view.style.backgroundImage = `url(${url})`;
+        view.textContent = '';
+      } else {
+        view.style.backgroundImage = '';
+        view.textContent = (username || 'U').charAt(0).toUpperCase();
+      }
+    }
+  </script>
+</body>
+</html>

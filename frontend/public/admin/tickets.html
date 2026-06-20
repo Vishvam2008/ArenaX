@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0a0a0f">
+  <title>Support Tickets - ArenaX Control Panel</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/assets/css/global.css">
+  <link rel="stylesheet" href="/assets/css/components.css">
+  <link rel="stylesheet" href="/assets/css/admin.css">
+  <style>
+    /* Admin Support Chat Layout */
+    .chat-layout {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 20px;
+    }
+
+    @media (min-width: 992px) {
+      .chat-layout {
+        grid-template-columns: 280px 1fr;
+      }
+    }
+
+    .tickets-sidebar {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-glass);
+      border-radius: 16px;
+      padding: 16px;
+      max-height: calc(100vh - 120px);
+      overflow-y: auto;
+    }
+
+    .tickets-sidebar-item {
+      padding: 12px;
+      border-bottom: 1px solid var(--border-glass);
+      cursor: pointer;
+      border-radius: 8px;
+      margin-bottom: 6px;
+      transition: all 0.2s;
+    }
+
+    .tickets-sidebar-item:hover, .tickets-sidebar-item.active {
+      background: rgba(124, 58, 237, 0.1);
+      border-color: var(--primary);
+    }
+
+    .tickets-sidebar-title {
+      font-size: 13.5px;
+      font-weight: 700;
+      color: #fff;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .tickets-sidebar-meta {
+      font-size: 11px;
+      color: var(--text-secondary);
+      margin-top: 4px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    /* Detail / Chat view */
+    .chat-pane {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-glass);
+      border-radius: 16px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      min-height: 480px;
+      max-height: calc(100vh - 120px);
+    }
+
+    .chat-header {
+      border-bottom: 1px solid var(--border-glass);
+      padding-bottom: 16px;
+      margin-bottom: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+    }
+
+    .chat-timeline {
+      flex: 1;
+      overflow-y: auto;
+      margin-bottom: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      padding-right: 8px;
+    }
+
+    .msg-bubble {
+      max-width: 80%;
+      padding: 12px 14px;
+      border-radius: 12px;
+      font-size: 13.5px;
+      line-height: 1.4;
+    }
+
+    .msg-bubble.player {
+      align-self: flex-start;
+      background: var(--bg-primary);
+      border: 1px solid var(--border-glass);
+      color: #fff;
+      border-bottom-left-radius: 4px;
+    }
+
+    .msg-bubble.admin {
+      align-self: flex-end;
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      color: #fff;
+      border-bottom-right-radius: 4px;
+    }
+
+    .msg-meta {
+      font-size: 10px;
+      color: rgba(255,255,255,0.6);
+      margin-top: 4px;
+      text-align: right;
+    }
+
+    .msg-bubble.player .msg-meta {
+      color: var(--text-secondary);
+    }
+
+    .reply-footer {
+      display: flex;
+      gap: 10px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="admin-layout">
+    
+    <div class="admin-main">
+      <main class="admin-content">
+
+        <div class="section-title">
+          <span>Support Desk Control Center</span>
+        </div>
+
+        <div class="chat-layout">
+          
+          <!-- Left Tickets Panel -->
+          <div class="tickets-sidebar">
+            <div style="margin-bottom: 12px;">
+              <select id="filterStatus" class="form-control" style="background: var(--bg-primary);">
+                <option value="open">Open Tickets</option>
+                <option value="closed">Closed Tickets</option>
+              </select>
+            </div>
+            
+            <div id="ticketsListContainer">
+              <div style="text-align: center; padding: 20px; color: var(--text-secondary);">Loading list...</div>
+            </div>
+          </div>
+
+          <!-- Right Chat Detail Panel -->
+          <div class="chat-pane" id="chatPane">
+            <div id="chatPlaceholder" style="flex: 1; display: grid; place-items: center; color: var(--text-secondary);">
+              Please select a support ticket from the sidebar to view the details and reply.
+            </div>
+
+            <!-- Active Chat Thread View -->
+            <div id="chatActiveThread" style="display: none; height: 100%; flex-direction: column; flex: 1;">
+              
+              <div class="chat-header">
+                <div>
+                  <h3 id="chatTitle" class="panel-title" style="font-size: 16px; margin-bottom: 4px;">Ticket Subject</h3>
+                  <div style="font-size: 12px; color: var(--text-secondary);" id="chatDesc">Description...</div>
+                  <a href="#" target="_blank" id="chatScreenshot" style="font-size: 11.5px; color: var(--secondary-light); margin-top: 6px; display: none; text-decoration: underline;">🖼️ View Attachment Screenshot</a>
+                </div>
+                <div style="text-align: right;">
+                  <button id="closeTicketBtn" class="btn btn-danger btn-xs">Resolve & Close</button>
+                  <button id="reopenTicketBtn" class="btn btn-ghost btn-xs" style="display: none;">Reopen Ticket</button>
+                </div>
+              </div>
+
+              <!-- Message bubbles timeline -->
+              <div class="chat-timeline" id="chatTimeline">
+                <!-- Populated dynamically -->
+              </div>
+
+              <!-- Reply Area -->
+              <form id="replyForm" class="reply-footer">
+                <input type="text" id="replyMsg" class="form-control" placeholder="Type administrative response..." required autocomplete="off">
+                <button type="submit" id="sendBtn" class="btn btn-primary" style="padding: 0 18px;">Send</button>
+              </form>
+
+            </div>
+          </div>
+
+        </div>
+
+      </main>
+    </div>
+
+  </div>
+
+  <div id="toast-container" style="position: fixed; top: 20px; right: 20px; z-index: 9999; pointer-events: none;"></div>
+
+  <script type="module">
+    import { api } from '/assets/js/api.js';
+    import { adminCore } from '/assets/js/admin-core.js';
+
+    const $ = id => document.getElementById(id);
+
+    let activeTicketId = null;
+    let listStatus = 'open';
+
+    function showToast(message, type = 'info') {
+      const container = $('toast-container');
+      const toast = document.createElement('div');
+      toast.className = `toast ${type}`;
+      toast.textContent = message;
+      toast.style.background = '#1a1a2e';
+      toast.style.border = '1px solid rgba(255,255,255,0.08)';
+      toast.style.borderRadius = '10px';
+      toast.style.padding = '12px 18px';
+      toast.style.color = '#fff';
+      toast.style.marginBottom = '10px';
+      toast.style.pointerEvents = 'all';
+      if (type === 'success') toast.style.borderColor = '#10b981';
+      if (type === 'error') toast.style.borderColor = '#ef4444';
+      
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.remove();
+      }, 3000);
+    }
+
+    // Initialize layout
+    const admin = adminCore.requireAdmin();
+    if (admin) {
+      adminCore.initLayout('tickets');
+      loadTicketsList();
+
+      $('filterStatus').addEventListener('change', (e) => {
+        listStatus = e.target.value;
+        loadTicketsList();
+      });
+
+      // Handle query param if passed
+      const params = new URLSearchParams(window.location.search);
+      const urlId = params.get('id');
+      if (urlId) {
+        openTicketDetail(urlId);
+      }
+
+      // Resolve Close
+      $('closeTicketBtn').addEventListener('click', async () => {
+        if (confirm('Are you sure you want to resolve and close this support ticket?')) {
+          try {
+            await api.put(`/admin/tickets/${activeTicketId}/status`, { status: 'closed' });
+            showToast('Ticket marked as resolved/closed.', 'success');
+            await openTicketDetail(activeTicketId);
+            await loadTicketsList();
+          } catch (err) {
+            showToast(err.message || 'Failed to close ticket.', 'error');
+          }
+        }
+      });
+
+      // Reopen
+      $('reopenTicketBtn').addEventListener('click', async () => {
+        try {
+          await api.put(`/admin/tickets/${activeTicketId}/status`, { status: 'open' });
+          showToast('Ticket reopened.', 'success');
+          await openTicketDetail(activeTicketId);
+          await loadTicketsList();
+        } catch (err) {
+          showToast(err.message || 'Failed to reopen ticket.', 'error');
+        }
+      });
+
+      // Reply Form Submission
+      $('replyForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const message = $('replyMsg').value.trim();
+        if (!message) return;
+
+        const sendBtn = $('sendBtn');
+        sendBtn.disabled = true;
+
+        try {
+          await api.post(`/admin/tickets/${activeTicketId}/reply`, { message });
+          $('replyMsg').value = '';
+          
+          await openTicketDetail(activeTicketId);
+        } catch (err) {
+          showToast(err.message || 'Failed to submit reply.', 'error');
+        } finally {
+          sendBtn.disabled = false;
+        }
+      });
+    }
+
+    async function loadTicketsList() {
+      try {
+        const res = await api.get('/admin/tickets', { status: listStatus, limit: 30 });
+        const data = res.data || res;
+        const list = data.tickets || [];
+
+        if (list.length === 0) {
+          $('ticketsListContainer').innerHTML = `<div style="text-align:center; padding:20px; color:var(--text-secondary)">No support tickets.</div>`;
+          return;
+        }
+
+        let html = '';
+        list.forEach(t => {
+          const dateStr = new Date(t.created_at).toLocaleDateString([], { month: 'short', day: 'numeric' });
+          
+          html += `
+            <div class="tickets-sidebar-item ${t.id === activeTicketId ? 'active' : ''}" data-id="${t.id}">
+              <div class="tickets-sidebar-title">${t.title}</div>
+              <div class="tickets-sidebar-meta">
+                <span>User: #${t.user_id}</span>
+                <span>${dateStr}</span>
+              </div>
+            </div>
+          `;
+        });
+        $('ticketsListContainer').innerHTML = html;
+
+        // Bind clicks
+        document.querySelectorAll('.tickets-sidebar-item').forEach(item => {
+          item.addEventListener('click', () => {
+            const id = item.dataset.id;
+            openTicketDetail(id);
+          });
+        });
+
+      } catch (err) {
+        console.error(err);
+        $('ticketsListContainer').innerHTML = `<div style="color:var(--danger)">Error loading.</div>`;
+      }
+    }
+
+    async function openTicketDetail(ticketId) {
+      activeTicketId = ticketId;
+      
+      $('chatPlaceholder').style.display = 'none';
+      $('chatActiveThread').style.display = 'flex';
+
+      // Highlight active sidebar row
+      document.querySelectorAll('.tickets-sidebar-item').forEach(item => {
+        if (item.dataset.id === ticketId) item.classList.add('active');
+        else item.classList.remove('active');
+      });
+
+      $('chatTimeline').innerHTML = `<div class="skeleton-card" style="height:140px;"></div>`;
+
+      try {
+        const res = await api.get(`/admin/tickets/${ticketId}`);
+        const ticket = res.data || res;
+
+        $('chatTitle').textContent = ticket.title;
+        $('chatDesc').textContent = `Description: ${ticket.description}`;
+
+        if (ticket.screenshot_url) {
+          $('chatScreenshot').href = ticket.screenshot_url;
+          $('chatScreenshot').style.display = 'inline-block';
+        } else {
+          $('chatScreenshot').style.display = 'none';
+        }
+
+        // Toggle buttons based on status
+        if (ticket.status === 'closed') {
+          $('closeTicketBtn').style.display = 'none';
+          $('reopenTicketBtn').style.display = 'block';
+          $('replyForm').style.display = 'none';
+        } else {
+          $('closeTicketBtn').style.display = 'block';
+          $('reopenTicketBtn').style.display = 'none';
+          $('replyForm').style.display = 'flex';
+        }
+
+        // Populate replies
+        const replies = ticket.replies || [];
+        
+        let chatHtml = `
+          <div class="msg-bubble player" style="background: rgba(255,255,255,0.02)">
+            <strong>System:</strong> Ticket initialized. User opened ticket.
+            <div class="msg-meta">${new Date(ticket.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+          </div>
+        `;
+
+        replies.forEach(r => {
+          const isAdmin = r.sender_type === 'admin';
+          const senderLabel = isAdmin ? 'Support Admin' : `Player #${ticket.user_id}`;
+          
+          chatHtml += `
+            <div class="msg-bubble ${isAdmin ? 'admin' : 'player'}">
+              <strong>${senderLabel}:</strong>
+              <div>${escapeHTML(r.message)}</div>
+              <div class="msg-meta">${new Date(r.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+            </div>
+          `;
+        });
+
+        $('chatTimeline').innerHTML = chatHtml;
+        
+        // Auto scroll to bottom
+        const t = $('chatTimeline');
+        t.scrollTop = t.scrollHeight;
+
+      } catch (err) {
+        console.error(err);
+        showToast('Failed to retrieve ticket thread.', 'error');
+      }
+    }
+
+    function escapeHTML(str) {
+      return str.replace(/[&<>'"]/g, 
+        tag => ({
+          '&': '&amp;',
+          '<': '&lt;',
+          '>': '&gt;',
+          "'": '&#39;',
+          '"': '&quot;'
+        }[tag] || tag)
+      );
+    }
+  </script>
+</body>
+</html>

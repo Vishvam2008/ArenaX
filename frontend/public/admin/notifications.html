@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0a0a0f">
+  <title>Broadcasts - ArenaX Control Panel</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/assets/css/global.css">
+  <link rel="stylesheet" href="/assets/css/components.css">
+  <link rel="stylesheet" href="/assets/css/admin.css">
+  <style>
+    .form-card {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-glass);
+      border-radius: 16px;
+      padding: 24px;
+      margin-bottom: 24px;
+      max-width: 600px;
+    }
+    .form-card-title {
+      font-family: var(--font-display);
+      font-size: 18px;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 16px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="admin-layout">
+    
+    <div class="admin-main">
+      <main class="admin-content">
+
+        <!-- 1. BROADCAST SYSTEM NOTIFICATION (Super Admin Only) -->
+        <div id="broadcastSection" style="display: none;">
+          <div class="form-card">
+            <h3 class="form-card-title">📢 Broadcast System-wide Notification</h3>
+            <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 20px;">
+              Send an in-app notification announcement to ALL players on the platform instantly.
+            </p>
+            
+            <form id="broadcastForm">
+              <div class="form-group">
+                <label class="form-label" for="broadTitle">Notification Title</label>
+                <input type="text" id="broadTitle" class="form-control" placeholder="E.g. Server Maintenance Notice" required>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="broadBody">Notification Message / Body</label>
+                <textarea id="broadBody" class="form-control" placeholder="Enter message text..." required style="height: 100px; resize: none;"></textarea>
+              </div>
+              <button type="submit" id="broadBtn" class="btn btn-primary w-full mt-4">📢 Send Broadcast</button>
+            </form>
+          </div>
+        </div>
+
+        <!-- 2. DIRECT NOTIFICATION TO USER -->
+        <div class="form-card">
+          <h3 class="form-card-title">✉️ Send Direct User Notification</h3>
+          <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 20px;">
+            Send an in-app notification directly to a single player's inbox by their Account User ID.
+          </p>
+          
+          <form id="directForm">
+            <div class="form-group">
+              <label class="form-label" for="userId">Target User ID (Integer Number)</label>
+              <input type="number" id="userId" class="form-control" placeholder="E.g. 101" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="directTitle">Notification Title</label>
+              <input type="text" id="directTitle" class="form-control" placeholder="E.g. Compensation Credited" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="directBody">Notification Message</label>
+              <textarea id="directBody" class="form-control" placeholder="Enter message text..." required style="height: 100px; resize: none;"></textarea>
+            </div>
+            <button type="submit" id="directBtn" class="btn btn-primary w-full mt-4">⚡ Send Direct Message</button>
+          </form>
+        </div>
+
+      </main>
+    </div>
+
+  </div>
+
+  <div id="toast-container" style="position: fixed; top: 20px; right: 20px; z-index: 9999; pointer-events: none;"></div>
+
+  <script type="module">
+    import { api } from '/assets/js/api.js';
+    import { adminCore } from '/assets/js/admin-core.js';
+
+    const $ = id => document.getElementById(id);
+
+    function showToast(message, type = 'info') {
+      const container = $('toast-container');
+      const toast = document.createElement('div');
+      toast.className = `toast ${type}`;
+      toast.textContent = message;
+      toast.style.background = '#1a1a2e';
+      toast.style.border = '1px solid rgba(255,255,255,0.08)';
+      toast.style.borderRadius = '10px';
+      toast.style.padding = '12px 18px';
+      toast.style.color = '#fff';
+      toast.style.marginBottom = '10px';
+      toast.style.pointerEvents = 'all';
+      if (type === 'success') toast.style.borderColor = '#10b981';
+      if (type === 'error') toast.style.borderColor = '#ef4444';
+      
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.remove();
+      }, 3000);
+    }
+
+    // Initialize layout
+    const admin = adminCore.requireAdmin();
+    const isSuper = adminCore.isSuperAdmin();
+
+    if (admin) {
+      adminCore.initLayout('notifications');
+
+      if (isSuper) {
+        $('broadcastSection').style.display = 'block';
+
+        // Bind broadcast submit
+        $('broadcastForm').addEventListener('submit', async (e) => {
+          e.preventDefault();
+          const btn = $('broadBtn');
+          btn.disabled = true;
+
+          try {
+            const title = $('broadTitle').value.trim();
+            const body = $('broadBody').value.trim();
+
+            await api.post('/admin/notifications/broadcast', { title, body });
+            showToast('System announcement broadcasted.', 'success');
+            
+            $('broadcastForm').reset();
+          } catch (err) {
+            showToast(err.message || 'Broadcast failed.', 'error');
+          } finally {
+            btn.disabled = false;
+          }
+        });
+      }
+
+      // Bind direct notify submit
+      $('directForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = $('directBtn');
+        btn.disabled = true;
+
+        try {
+          const userId = $('userId').value;
+          const title = $('directTitle').value.trim();
+          const body = $('directBody').value.trim();
+
+          await api.post('/admin/notifications/user', { userId, title, body });
+          showToast('Direct notification sent.', 'success');
+          
+          $('directForm').reset();
+        } catch (err) {
+          showToast(err.message || 'Direct notify failed.', 'error');
+        } finally {
+          btn.disabled = false;
+        }
+      });
+    }
+  </script>
+</body>
+</html>

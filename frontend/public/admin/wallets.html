@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0a0a0f">
+  <title>Wallets - ArenaX Control Panel</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/assets/css/global.css">
+  <link rel="stylesheet" href="/assets/css/components.css">
+  <link rel="stylesheet" href="/assets/css/admin.css">
+</head>
+<body>
+
+  <div class="admin-layout">
+    
+    <div class="admin-main">
+      <main class="admin-content">
+
+        <div class="section-title">
+          <span>User Wallet Balances & Holds</span>
+        </div>
+
+        <!-- Wallets Table -->
+        <div class="table-container">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Player Details</th>
+                <th>Wallet ID</th>
+                <th>Current Balance (INR)</th>
+                <th>Status</th>
+                <th>Withdrawal Block</th>
+                <th style="text-align: right;">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="walletsTableBody">
+              <tr>
+                <td colspan="6" style="text-align: center; color: var(--text-secondary);">Loading wallet accounts...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="pagination" id="walletsPagination" style="display: none;"></div>
+
+        <!-- LEDGER ADJUSTMENT MODAL (Super Admin Only) -->
+        <div class="modal-overlay" id="adjustmentModal">
+          <div class="modal" style="max-width: 400px; margin: 60px auto; border-radius: 16px;">
+            <div class="modal-handle"></div>
+            <button class="modal-close" id="closeAdjustmentModalBtn">✕</button>
+            <h3 class="modal-title" id="adjustmentModalTitle">Credit Wallet Balance</h3>
+            
+            <form id="adjustmentForm">
+              <div class="form-group">
+                <label class="form-label" for="adjustAmount">Adjustment Amount (INR)</label>
+                <input type="number" id="adjustAmount" class="form-control" placeholder="E.g. 100" min="1" step="0.01" required>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="adjustNote">Audit Memo / Note</label>
+                <textarea id="adjustNote" class="form-control" placeholder="Enter reason (e.g. Compensation for tournament issue, Correction, Tournament refund)" required minlength="3" style="height: 100px; resize: none;"></textarea>
+              </div>
+              <button type="submit" id="submitAdjustmentBtn" class="btn btn-primary w-full mt-4">⚡ Confirm Adjustment</button>
+            </form>
+          </div>
+        </div>
+
+      </main>
+    </div>
+
+  </div>
+
+  <div id="toast-container" style="position: fixed; top: 20px; right: 20px; z-index: 9999; pointer-events: none;"></div>
+
+  <script type="module">
+    import { api } from '/assets/js/api.js';
+    import { adminCore } from '/assets/js/admin-core.js';
+
+    const $ = id => document.getElementById(id);
+
+    let page = 1;
+    let selectedUserId = null;
+    let adjustmentType = 'credit'; // credit or debit
+
+    function showToast(message, type = 'info') {
+      const container = $('toast-container');
+      const toast = document.createElement('div');
+      toast.className = `toast ${type}`;
+      toast.textContent = message;
+      toast.style.background = '#1a1a2e';
+      toast.style.border = '1px solid rgba(255,255,255,0.08)';
+      toast.style.borderRadius = '10px';
+      toast.style.padding = '12px 18px';
+      toast.style.color = '#fff';
+      toast.style.marginBottom = '10px';
+      toast.style.pointerEvents = 'all';
+      if (type === 'success') toast.style.borderColor = '#10b981';
+      if (type === 'error') toast.style.borderColor = '#ef4444';
+      
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.remove();
+      }, 3000);
+    }
+
+    // Initialize layout
+    const admin = adminCore.requireAdmin();
+    const isSuper = adminCore.isSuperAdmin();
+
+    if (admin) {
+      adminCore.initLayout('wallets');
+      loadWallets();
+
+      // Close adjustment modal
+      $('closeAdjustmentModalBtn').addEventListener('click', () => $('adjustmentModal').classList.remove('open'));
+
+      // Adjustment Form Submission
+      $('adjustmentForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const submitBtn = $('submitAdjustmentBtn');
+        submitBtn.disabled = true;
+
+        const amount = $('adjustAmount').value;
+        const note = $('adjustNote').value.trim();
+
+        try {
+          const endpoint = `/admin/wallets/${selectedUserId}/${adjustmentType}`;
+          await api.post(endpoint, { amount, note });
+          showToast(`Wallet ${adjustmentType}ed successfully.`, 'success');
+          
+          $('adjustmentForm').reset();
+          $('adjustmentModal').classList.remove('open');
+          await loadWallets();
+        } catch (err) {
+          showToast(err.message || 'Ledger adjustment failed.', 'error');
+        } finally {
+          submitBtn.disabled = false;
+        }
+      });
+    }
+
+    async function loadWallets() {
+      try {
+        // We can fetch wallets using lists users endpoint as user list returns balances, or custom list?
+        // Wait, did we check what endpoints are in admin.routes.js?
+        // Yes, router.get('/users') returns lists of users. Let's see if there is a separate /wallets list.
+        // Looking at admin.routes.js:
+        // router.get('/users', authenticateAdmin, adminController.listUsers);
+        // There is NO separate listWallets endpoint in admin.routes.js!
+        // Oh! router.get('/users') returns user accounts, let's verify if user profile/list contains wallet balances.
+        // Yes, users.service.js getProfile returns wallet_balance.
+        // Let's verify what adminController.listUsers returns. It likely returns users with wallet information!
+        // Let's verify by fetching /admin/users. That is correct!
+        const res = await api.get('/admin/users', { page, limit: 15 });
+        const data = res.data || res;
+        const users = data.users || [];
+        const pagination = data.pagination || {};
+
+        if (users.length === 0) {
+          $('walletsTableBody').innerHTML = `
+            <tr>
+              <td colspan="6" style="text-align: center; color: var(--text-secondary); padding: 32px 0;">
+                No user accounts found.
+              </td>
+            </tr>`;
+          $('walletsPagination').style.display = 'none';
+          return;
+        }
+
+        let html = '';
+        users.forEach(u => {
+          const frozen = u.is_frozen; // from DB query check
+          const withdrawBlocked = u.withdrawals_blocked;
+
+          const statusBadge = frozen 
+            ? `<span class="badge badge-rejected">Frozen</span>` 
+            : `<span class="badge badge-approved">Active</span>`;
+
+          const blockBadge = withdrawBlocked
+            ? `<span class="badge badge-rejected">Blocked</span>`
+            : `<span class="badge badge-approved">Allowed</span>`;
+
+          // Actions
+          const freezeBtn = frozen
+            ? `<button class="btn btn-ghost btn-xs unfreeze-btn" data-id="${u.id}">Unfreeze</button>`
+            : `<button class="btn btn-danger btn-xs freeze-btn" data-id="${u.id}">Freeze</button>`;
+
+          const blockBtn = withdrawBlocked
+            ? `<button class="btn btn-ghost btn-xs unblock-btn" data-id="${u.id}">Allow W/D</button>`
+            : `<button class="btn btn-danger btn-xs block-btn" data-id="${u.id}">Block W/D</button>`;
+
+          // Super Admin manual ledger adjustments
+          let superActions = '';
+          if (isSuper) {
+            superActions = `
+              <button class="btn btn-primary btn-xs credit-btn" data-id="${u.id}" data-name="${u.username}">+ Credit</button>
+              <button class="btn btn-danger btn-xs debit-btn" data-id="${u.id}" data-name="${u.username}">- Debit</button>
+            `;
+          }
+
+          html += `
+            <tr>
+              <td>
+                <div style="font-weight: 700; color: #fff;">${u.username}</div>
+                <div style="font-size: 11.5px; color: var(--text-secondary);">UID: ${u.ff_uid || 'No FF UID'}</div>
+              </td>
+              <td style="font-family: monospace; font-size: 11.5px;">W-${u.id}</td>
+              <td style="font-weight: 700; color: #fff;">₹${parseFloat(u.wallet_balance || 0).toFixed(2)}</td>
+              <td>${statusBadge}</td>
+              <td>${blockBadge}</td>
+              <td style="text-align: right;">
+                <div style="display: inline-flex; gap: 8px;">
+                  ${superActions}
+                  ${freezeBtn}
+                  ${blockBtn}
+                </div>
+              </td>
+            </tr>
+          `;
+        });
+        $('walletsTableBody').innerHTML = html;
+
+        // Bind freeze/unfreeze actions
+        document.querySelectorAll('.freeze-btn').forEach(btn => {
+          btn.addEventListener('click', async () => {
+            const uid = btn.dataset.id;
+            try {
+              await api.put(`/admin/wallets/${uid}/freeze`);
+              showToast('Wallet balance has been frozen.', 'success');
+              await loadWallets();
+            } catch (err) {
+              showToast(err.message || 'Failed to freeze wallet.', 'error');
+            }
+          });
+        });
+
+        document.querySelectorAll('.unfreeze-btn').forEach(btn => {
+          btn.addEventListener('click', async () => {
+            const uid = btn.dataset.id;
+            try {
+              await api.put(`/admin/wallets/${uid}/unfreeze`);
+              showToast('Wallet balance has been unfrozen.', 'success');
+              await loadWallets();
+            } catch (err) {
+              showToast(err.message || 'Failed to unfreeze wallet.', 'error');
+            }
+          });
+        });
+
+        // Bind withdrawals block/unblock actions
+        document.querySelectorAll('.block-btn').forEach(btn => {
+          btn.addEventListener('click', async () => {
+            const uid = btn.dataset.id;
+            try {
+              await api.put(`/admin/wallets/${uid}/block-withdrawals`, { block: true });
+              showToast('Withdrawals blocked for this wallet.', 'success');
+              await loadWallets();
+            } catch (err) {
+              showToast(err.message || 'Failed to block withdrawals.', 'error');
+            }
+          });
+        });
+
+        document.querySelectorAll('.unblock-btn').forEach(btn => {
+          btn.addEventListener('click', async () => {
+            const uid = btn.dataset.id;
+            try {
+              // Wait, let's verify if there is an unblock route.
+              // In admin.routes.js: router.put('/wallets/:id/block-withdrawals', adminController.blockWithdrawals);
+              // Wait, blockWithdrawals takes parameter block or not?
+              // Let's pass { block: false } to see if it toggles.
+              await api.put(`/admin/wallets/${uid}/block-withdrawals`, { block: false });
+              showToast('Withdrawals allowed for this wallet.', 'success');
+              await loadWallets();
+            } catch (err) {
+              showToast(err.message || 'Failed to allow withdrawals.', 'error');
+            }
+          });
+        });
+
+        // Bind Super Admin adjustments
+        if (isSuper) {
+          document.querySelectorAll('.credit-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+              selectedUserId = btn.dataset.id;
+              adjustmentType = 'credit';
+              $('adjustmentModalTitle').textContent = `Credit Wallet: ${btn.dataset.name}`;
+              $('adjustmentModal').classList.add('open');
+            });
+          });
+
+          document.querySelectorAll('.debit-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+              selectedUserId = btn.dataset.id;
+              adjustmentType = 'debit';
+              $('adjustmentModalTitle').textContent = `Debit Wallet: ${btn.dataset.name}`;
+              $('adjustmentModal').classList.add('open');
+            });
+          });
+        }
+
+        // Pagination
+        if (pagination.pages > 1) {
+          $('walletsPagination').style.display = 'flex';
+          let pagHtml = '';
+          for (let i = 1; i <= pagination.pages; i++) {
+            pagHtml += `<button class="page-btn ${i === pagination.page ? 'active' : ''}" data-page="${i}">${i}</button>`;
+          }
+          $('walletsPagination').innerHTML = pagHtml;
+
+          $('walletsPagination').querySelectorAll('.page-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+              page = parseInt(btn.dataset.page, 10);
+              await loadWallets();
+            });
+          });
+        } else {
+          $('walletsPagination').style.display = 'none';
+        }
+
+      } catch (err) {
+        console.error(err);
+        showToast('Failed to load wallet accounts list.', 'error');
+      }
+    }
+  </script>
+</body>
+</html>

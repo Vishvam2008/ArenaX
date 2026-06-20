@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0a0a0f">
+  <title>Match Results - ArenaX Control Panel</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/assets/css/global.css">
+  <link rel="stylesheet" href="/assets/css/components.css">
+  <link rel="stylesheet" href="/assets/css/admin.css">
+  <style>
+    .screenshot-flex {
+      display: flex;
+      gap: 6px;
+    }
+    .screenshot-thumb {
+      width: 44px;
+      height: 44px;
+      border-radius: 6px;
+      border: 1px solid var(--border-glass);
+      cursor: pointer;
+      object-fit: cover;
+      background: rgba(255,255,255,0.02);
+    }
+    .screenshot-thumb:hover {
+      border-color: var(--primary);
+    }
+  </style>
+</head>
+<body>
+
+  <div class="admin-layout">
+    
+    <div class="admin-main">
+      <main class="admin-content">
+
+        <div class="section-title">
+          <span>Match Score Submissions</span>
+        </div>
+
+        <!-- Filter tabs -->
+        <div class="tabs mb-6" style="max-width: 400px;">
+          <button class="tab-btn active" data-status="pending">Pending</button>
+          <button class="tab-btn" data-status="approved">Approved</button>
+          <button class="tab-btn" data-status="rejected">Rejected</button>
+        </div>
+
+        <!-- Results Table -->
+        <div class="table-container">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>User Details</th>
+                <th>Match ID</th>
+                <th>Rank Details</th>
+                <th>Kills Count</th>
+                <th>Screenshots</th>
+                <th>Status</th>
+                <th style="text-align: right;">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="resultsTableBody">
+              <tr>
+                <td colspan="7" style="text-align: center; color: var(--text-secondary);">Loading result submissions...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="pagination" id="resultsPagination" style="display: none;"></div>
+
+        <!-- IMAGE SCREENSHOT MODAL PREVIEW -->
+        <div class="modal-overlay" id="imageModal">
+          <div class="modal" style="max-width: 500px; margin: 40px auto; border-radius: 16px; text-align: center;">
+            <button class="modal-close" id="closeImageModalBtn">✕</button>
+            <h3 class="modal-title" style="margin-bottom: 16px;">Match Result Screenshot</h3>
+            <img id="modalPreviewImg" src="" alt="Full Screenshot" style="max-width: 100%; max-height: 70vh; border-radius: 12px; border: 1px solid var(--border-glass);">
+          </div>
+        </div>
+
+        <!-- REJECTION MOTIVE MODAL -->
+        <div class="modal-overlay" id="rejectModal">
+          <div class="modal" style="max-width: 400px; margin: 80px auto; border-radius: 16px;">
+            <div class="modal-handle"></div>
+            <button class="modal-close" id="closeRejectModalBtn">✕</button>
+            <h3 class="modal-title">Reject Submission Score</h3>
+            
+            <form id="rejectForm">
+              <div class="form-group">
+                <label class="form-label" for="rejectReason">Rejection Reason</label>
+                <textarea id="rejectReason" class="form-control" placeholder="Enter reason (e.g. Mismatched details, Missing UI parameters, Fraudulent screenshot)" required minlength="5" style="height: 100px; resize: none;"></textarea>
+              </div>
+              <button type="submit" id="submitRejectBtn" class="btn btn-danger w-full mt-4">❌ Confirm Rejection</button>
+            </form>
+          </div>
+        </div>
+
+      </main>
+    </div>
+
+  </div>
+
+  <div id="toast-container" style="position: fixed; top: 20px; right: 20px; z-index: 9999; pointer-events: none;"></div>
+
+  <script type="module">
+    import { api } from '/assets/js/api.js';
+    import { adminCore } from '/assets/js/admin-core.js';
+
+    const $ = id => document.getElementById(id);
+
+    let page = 1;
+    let currentStatus = 'pending';
+    let selectedResultId = null;
+
+    function showToast(message, type = 'info') {
+      const container = $('toast-container');
+      const toast = document.createElement('div');
+      toast.className = `toast ${type}`;
+      toast.textContent = message;
+      toast.style.background = '#1a1a2e';
+      toast.style.border = '1px solid rgba(255,255,255,0.08)';
+      toast.style.borderRadius = '10px';
+      toast.style.padding = '12px 18px';
+      toast.style.color = '#fff';
+      toast.style.marginBottom = '10px';
+      toast.style.pointerEvents = 'all';
+      if (type === 'success') toast.style.borderColor = '#10b981';
+      if (type === 'error') toast.style.borderColor = '#ef4444';
+      
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.remove();
+      }, 3000);
+    }
+
+    // Auth verification
+    const admin = adminCore.requireAdmin();
+    if (admin) {
+      adminCore.initLayout('results');
+      loadResults();
+
+      // Bind tabs
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          currentStatus = btn.dataset.status;
+          page = 1;
+          loadResults();
+        });
+      });
+
+      // Modals setup
+      $('closeImageModalBtn').addEventListener('click', () => $('imageModal').classList.remove('open'));
+      $('closeRejectModalBtn').addEventListener('click', () => $('rejectModal').classList.remove('open'));
+
+      // Reject form submission
+      $('rejectForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const submitBtn = $('submitRejectBtn');
+        submitBtn.disabled = true;
+
+        try {
+          const adminNote = $('rejectReason').value.trim();
+          await api.put(`/admin/results/${selectedResultId}/reject`, { adminNote });
+          showToast('Match submission rejected.', 'success');
+          
+          $('rejectForm').reset();
+          $('rejectModal').classList.remove('open');
+          await loadResults();
+        } catch (err) {
+          showToast(err.message || 'Failed to reject result.', 'error');
+        } finally {
+          submitBtn.disabled = false;
+        }
+      });
+    }
+
+    async function loadResults() {
+      try {
+        const res = await api.get('/admin/results', { page, limit: 10, status: currentStatus });
+        const data = res.data || res;
+        const list = data.results || [];
+        const pagination = data.pagination || {};
+
+        if (list.length === 0) {
+          $('resultsTableBody').innerHTML = `
+            <tr>
+              <td colspan="7" style="text-align: center; color: var(--text-secondary); padding: 32px 0;">
+                No result submissions found in this section.
+              </td>
+            </tr>`;
+          $('resultsPagination').style.display = 'none';
+          return;
+        }
+
+        let html = '';
+        list.forEach(r => {
+          const rankText = r.got_booyah 
+            ? `<div style="font-weight:700; color:var(--gold);">Rank ${r.rank} (Booyah)</div>` 
+            : `<div>Rank ${r.rank}</div>`;
+          
+          // Screenshot arrays
+          let screenshotsHtml = '<div class="screenshot-flex">';
+          if (r.match_screenshot_url) screenshotsHtml += `<img src="${r.match_screenshot_url}" class="screenshot-thumb" alt="Match">`;
+          if (r.kill_screenshot_url) screenshotsHtml += `<img src="${r.kill_screenshot_url}" class="screenshot-thumb" alt="Kills">`;
+          if (r.result_screenshot_url) screenshotsHtml += `<img src="${r.result_screenshot_url}" class="screenshot-thumb" alt="Result">`;
+          screenshotsHtml += '</div>';
+
+          let actionsHtml = '';
+          if (currentStatus === 'pending') {
+            actionsHtml = `
+              <button class="btn btn-primary btn-xs approve-btn" data-id="${r.id}">Verify & Pay</button>
+              <button class="btn btn-danger btn-xs reject-btn" data-id="${r.id}">Reject</button>
+            `;
+          } else {
+            actionsHtml = `<span style="font-size:12px; color:var(--text-secondary)">Reviewed</span>`;
+          }
+
+          html += `
+            <tr>
+              <td>
+                <div style="font-weight: 700; color: #fff;">${r.username}</div>
+                <div style="font-size: 11.5px; color: var(--secondary-light);">UID: ${r.ff_uid || 'No UID'}</div>
+              </td>
+              <td>Tournament #${r.tournament_id}</td>
+              <td>${rankText}</td>
+              <td style="font-weight: 700; color: #fff;">${r.kills} Kills</td>
+              <td>${screenshotsHtml}</td>
+              <td>
+                <span class="badge ${r.status === 'approved' ? 'badge-approved' : (r.status === 'rejected' ? 'badge-rejected' : 'badge-pending')}">${r.status}</span>
+              </td>
+              <td style="text-align: right;">
+                <div style="display: inline-flex; gap: 8px;">
+                  ${actionsHtml}
+                </div>
+              </td>
+            </tr>
+          `;
+        });
+        $('resultsTableBody').innerHTML = html;
+
+        // Bind image previews
+        document.querySelectorAll('.screenshot-thumb').forEach(img => {
+          img.addEventListener('click', () => {
+            $('modalPreviewImg').src = img.src;
+            $('imageModal').classList.add('open');
+          });
+        });
+
+        // Bind approval clicks
+        document.querySelectorAll('.approve-btn').forEach(btn => {
+          btn.addEventListener('click', async () => {
+            const rid = btn.dataset.id;
+            if (confirm('Approve match details and credit kill/placement prize rewards to player wallet?')) {
+              try {
+                await api.put(`/admin/results/${rid}/approve`);
+                showToast('Match score approved and rewards credited.', 'success');
+                await loadResults();
+              } catch (err) {
+                showToast(err.message || 'Failed to approve results.', 'error');
+              }
+            }
+          });
+        });
+
+        // Bind rejection clicks
+        document.querySelectorAll('.reject-btn').forEach(btn => {
+          btn.addEventListener('click', () => {
+            selectedResultId = btn.dataset.id;
+            $('rejectModal').classList.add('open');
+          });
+        });
+
+        // Pagination
+        if (pagination.pages > 1) {
+          $('resultsPagination').style.display = 'flex';
+          let pagHtml = '';
+          for (let i = 1; i <= pagination.pages; i++) {
+            pagHtml += `<button class="page-btn ${i === pagination.page ? 'active' : ''}" data-page="${i}">${i}</button>`;
+          }
+          $('resultsPagination').innerHTML = pagHtml;
+
+          $('resultsPagination').querySelectorAll('.page-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+              page = parseInt(btn.dataset.page, 10);
+              await loadResults();
+            });
+          });
+        } else {
+          $('resultsPagination').style.display = 'none';
+        }
+
+      } catch (err) {
+        console.error(err);
+        showToast('Failed to load result submissions.', 'error');
+      }
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="description" content="Get support for ArenaX payments, rewards, and match inquiries. Open tickets and chat with admins.">
+  <meta name="theme-color" content="#0a0a0f">
+  <title>Support Tickets - ArenaX</title>
+  <link rel="manifest" href="/manifest.json">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/assets/css/global.css">
+  <link rel="stylesheet" href="/assets/css/components.css">
+  <style>
+    body {
+      padding-top: 60px;
+      padding-bottom: 80px;
+      background-color: var(--bg-primary);
+      min-height: 100vh;
+    }
+
+    .main-container {
+      max-width: 540px;
+      margin: 0 auto;
+      padding: 16px;
+    }
+
+    /* ──── TOAST ──── */
+    #toast-container { position: fixed; top: 20px; right: 16px; left: 16px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; pointer-events: none; }
+    .toast { background: var(--bg-card); border: 1px solid var(--border-glass); border-radius: 12px; padding: 14px 18px; font-size: 14px; font-weight: 500; display: flex; align-items: center; gap: 10px; box-shadow: 0 8px 32px rgba(0,0,0,0.5); pointer-events: all; animation: slideIn .3s ease; }
+    .toast.success { border-color: var(--success); }
+    .toast.error   { border-color: var(--danger); }
+    .toast.info    { border-color: var(--primary); }
+    @keyframes slideIn { from { opacity:0; transform:translateY(-12px); } to { opacity:1; transform:translateY(0); } }
+    @keyframes fadeOut { from { opacity:1; } to { opacity:0; transform:translateY(-8px); } }
+
+    /* Tickets list styles */
+    .ticket-card {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-glass);
+      border-radius: 16px;
+      padding: 16px;
+      margin-bottom: 12px;
+      cursor: pointer;
+      transition: border-color 0.2s, transform 0.2s;
+    }
+
+    .ticket-card:hover {
+      border-color: var(--primary);
+      transform: translateY(-2px);
+    }
+
+    .ticket-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 8px;
+    }
+
+    .ticket-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: #fff;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      flex: 1;
+      padding-right: 12px;
+    }
+
+    .ticket-category {
+      font-size: 11px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--border-glass);
+      color: var(--text-secondary);
+      padding: 2px 8px;
+      border-radius: 8px;
+      text-transform: capitalize;
+    }
+
+    .ticket-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 12px;
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    /* Support Chat screen */
+    .chat-header {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-glass);
+      border-radius: 16px;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+
+    .chat-header-title {
+      font-family: var(--font-display);
+      font-size: 18px;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .chat-header-desc {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-top: 6px;
+      line-height: 1.4;
+    }
+
+    .chat-screenshot-link {
+      display: inline-block;
+      font-size: 12px;
+      color: var(--secondary-light);
+      margin-top: 8px;
+      text-decoration: underline;
+    }
+
+    .chat-messages {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      margin-bottom: 20px;
+    }
+
+    .msg-bubble {
+      max-width: 85%;
+      padding: 12px 16px;
+      border-radius: 16px;
+      font-size: 13.5px;
+      line-height: 1.4;
+      position: relative;
+    }
+
+    .msg-bubble.player {
+      align-self: flex-end;
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      color: #fff;
+      border-bottom-right-radius: 4px;
+    }
+
+    .msg-bubble.admin {
+      align-self: flex-start;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-glass);
+      color: #fff;
+      border-bottom-left-radius: 4px;
+    }
+
+    .msg-meta {
+      font-size: 10px;
+      color: rgba(255,255,255,0.6);
+      margin-top: 4px;
+      text-align: right;
+    }
+
+    .msg-bubble.admin .msg-meta {
+      color: var(--text-secondary);
+    }
+
+    .msg-sender-tag {
+      font-size: 9px;
+      font-weight: 700;
+      background: var(--secondary);
+      color: #fff;
+      padding: 1px 4px;
+      border-radius: 4px;
+      margin-bottom: 4px;
+      display: inline-block;
+    }
+
+    /* Reply area */
+    .reply-area {
+      background: var(--bg-secondary);
+      border-top: 1px solid var(--border-glass);
+      padding: 12px 0;
+      position: sticky;
+      bottom: var(--nav-h);
+      z-index: 10;
+    }
+
+    .reply-box {
+      display: flex;
+      gap: 8px;
+    }
+
+    .reply-input {
+      flex: 1;
+      background: var(--bg-primary);
+      border: 1px solid var(--border-glass);
+      border-radius: 12px;
+      padding: 10px 14px;
+      color: #fff;
+      font-family: var(--font-body);
+      font-size: 14px;
+      resize: none;
+      height: 42px;
+    }
+
+    .reply-input:focus {
+      outline: none;
+      border-color: var(--primary);
+    }
+
+    .reply-send-btn {
+      width: 44px;
+      height: 42px;
+      border: none;
+      background: var(--primary);
+      color: #fff;
+      border-radius: 12px;
+      cursor: pointer;
+      display: grid;
+      place-items: center;
+      transition: background 0.2s;
+    }
+
+    .reply-send-btn:hover {
+      background: var(--primary-light);
+    }
+
+    /* Form styles */
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    .form-label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      margin-bottom: 8px;
+    }
+
+    .form-control {
+      width: 100%;
+      background: var(--bg-primary);
+      border: 1px solid var(--border-glass);
+      border-radius: 10px;
+      padding: 12px 14px;
+      color: #fff;
+      font-family: var(--font-body);
+      font-size: 14px;
+      transition: border-color 0.2s;
+    }
+
+    .form-control:focus {
+      outline: none;
+      border-color: var(--primary);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top App Navbar -->
+  <nav class="navbar">
+    <a href="/public/dashboard/" class="navbar-logo">ArenaX</a>
+    <div class="navbar-spacer"></div>
+    <div class="navbar-actions">
+      <!-- Notification Bell -->
+      <button class="notification-bell" id="bellBtn" aria-label="Notifications" aria-haspopup="true">
+        🔔
+        <span class="badge badge-danger" id="bellBadge" style="display:none; position:absolute; top:-2px; right:-2px; padding:0.1rem 0.35rem; font-size:9px;">0</span>
+      </button>
+      <div class="notif-dropdown" id="notifDropdown" style="position:fixed; top:54px; right:12px; width:320px; background:var(--bg-secondary); border:1px solid var(--border-glass); border-radius:12px; display:none; flex-direction:column; overflow:hidden; box-shadow:var(--shadow-lg); z-index:var(--z-dropdown);"></div>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="main-container">
+
+    <!-- 1. LIST VIEW (Default) -->
+    <div id="listView">
+      <div class="section-title" style="margin-bottom: 16px;">
+        <span>My Support Tickets</span>
+        <button id="openCreateModalBtn" class="btn btn-primary btn-xs">➕ New Ticket</button>
+      </div>
+
+      <div id="ticketsContainer">
+        <div class="skeleton-card" style="height: 100px; margin-bottom: 12px;"></div>
+        <div class="skeleton-card" style="height: 100px;"></div>
+      </div>
+
+      <div class="pagination" id="listPagination" style="display: none;"></div>
+    </div>
+
+    <!-- 2. DETAIL CHAT VIEW (Hidden by default) -->
+    <div id="chatView" style="display: none;">
+      <button id="backToListBtn" class="btn btn-ghost btn-xs mb-4">⬅️ Back to Support List</button>
+      
+      <div class="chat-header">
+        <div class="chat-header-title" id="chatTitle">Tournament Score Not Credited</div>
+        <div class="chat-header-desc" id="chatDesc">Description loads here...</div>
+        <a href="#" target="_blank" id="chatScreenshot" class="chat-screenshot-link" style="display: none;">🖼️ View Uploaded Screenshot</a>
+        <div style="margin-top: 10px;">
+          <span class="badge" id="chatStatusBadge">Open</span>
+          <span style="font-size: 11px; color: var(--text-secondary); margin-left: 8px;" id="chatCategory">Category: Tournament</span>
+        </div>
+      </div>
+
+      <div class="chat-messages" id="chatMessages">
+        <!-- Message bubbles populated dynamically -->
+      </div>
+
+      <div class="reply-area" id="replyArea">
+        <form id="replyForm" class="reply-box">
+          <textarea id="replyMsg" class="reply-input" placeholder="Type your reply..." required></textarea>
+          <button type="submit" id="sendReplyBtn" class="reply-send-btn" title="Send Reply">⚡</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- 3. CREATE TICKET MODAL -->
+    <div class="modal-overlay" id="createModal">
+      <div class="modal">
+        <div class="modal-handle"></div>
+        <button class="modal-close" id="closeCreateModalBtn">✕</button>
+        <h3 class="modal-title">Open New Support Ticket</h3>
+        
+        <form id="createTicketForm" enctype="multipart/form-data">
+          <div class="form-group">
+            <label class="form-label" for="category">Support Category</label>
+            <select id="category" class="form-control" required style="background: var(--bg-primary);">
+              <option value="payment">Payment Deposit / Withdrawal Issues</option>
+              <option value="tournament">Tournament Entry / Lobby Issues</option>
+              <option value="reward">Missing Rewards / Rankings</option>
+              <option value="withdrawal">Blocked Wallet / Withdrawals</option>
+              <option value="other" selected>Other / General Inquiry</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="title">Subject Title</label>
+            <input type="text" id="title" class="form-control" placeholder="E.g. Deposit ₹100 not credited yet" required minlength="5" maxlength="100">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="description">Detailed Description</label>
+            <textarea id="description" class="form-control" placeholder="Please describe your issue in detail so our admins can assist you. Include dates/transaction IDs if applicable." required minlength="10" style="height: 120px; resize: none;"></textarea>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="screenshot">Attach Screenshot (Optional)</label>
+            <input type="file" id="screenshot" accept="image/*" class="form-control" style="padding: 8px 12px;">
+            <span style="font-size: 11px; color: var(--text-secondary); margin-top: 4px; display: block;">Max file size: 5MB</span>
+          </div>
+
+          <button type="submit" id="submitTicketBtn" class="btn btn-primary w-full mt-4">🚀 Submit Ticket</button>
+        </form>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Bottom Navigation Bar -->
+  <nav class="bottom-nav">
+    <a href="/public/dashboard/" class="bottom-nav-item">
+      <span class="nav-icon">🏠</span>
+      <span class="nav-label">Home</span>
+    </a>
+    <a href="/public/tournaments/" class="bottom-nav-item">
+      <span class="nav-icon">🏆</span>
+      <span class="nav-label">Matches</span>
+    </a>
+    <a href="/public/wallet/" class="bottom-nav-item">
+      <span class="nav-icon">💳</span>
+      <span class="nav-label">Wallet</span>
+    </a>
+    <a href="/public/profile/" class="bottom-nav-item">
+      <span class="nav-icon">👤</span>
+      <span class="nav-label">Profile</span>
+    </a>
+  </nav>
+
+  <!-- Toast Container -->
+  <div id="toast-container"></div>
+
+  <script type="module">
+    import { api } from '/assets/js/api.js';
+    import { auth } from '/assets/js/auth.js';
+    import { NotificationManager } from '/assets/js/notifications.js';
+
+    const $ = id => document.getElementById(id);
+
+    let activeTicketId = null;
+    let listPage = 1;
+
+    // Toast alert helper
+    function showToast(message, type = 'info') {
+      const container = $('toast-container');
+      const toast = document.createElement('div');
+      toast.className = `toast ${type}`;
+      toast.textContent = message;
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.style.animation = 'fadeOut 0.3s ease forwards';
+        setTimeout(() => toast.remove(), 300);
+      }, 3000);
+    }
+
+    // App Initialization
+    (async () => {
+      await auth.init();
+      const user = auth.requireAuth();
+      if (!user) return;
+
+      // Init notification bell
+      const notifMgr = new NotificationManager($('bellBtn'), $('bellBadge'), $('notifDropdown'));
+      notifMgr.init();
+
+      // Check if ticket ID is in the query params to view directly
+      const params = new URLSearchParams(window.location.search);
+      const urlTicketId = params.get('id');
+
+      if (urlTicketId) {
+        await viewTicketChat(urlTicketId);
+      } else {
+        await loadTickets();
+      }
+
+      // Modal open/close listeners
+      $('openCreateModalBtn').addEventListener('click', () => {
+        $('createModal').classList.add('open');
+      });
+
+      $('closeCreateModalBtn').addEventListener('click', () => {
+        $('createModal').classList.remove('open');
+      });
+
+      // Submit Create Ticket Form
+      $('createTicketForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const submitBtn = $('submitTicketBtn');
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Submitting...';
+
+        try {
+          const fileInput = $('screenshot');
+          const file = fileInput.files[0];
+
+          const formData = new FormData();
+          formData.append('title', $('title').value.trim());
+          formData.append('description', $('description').value.trim());
+          formData.append('category', $('category').value);
+          if (file) {
+            formData.append('screenshot', file);
+          }
+
+          const res = await api.upload('/tickets', formData);
+          showToast('Ticket submitted successfully!', 'success');
+          
+          // Clear inputs
+          $('createTicketForm').reset();
+          $('createModal').classList.remove('open');
+
+          // Reload tickets
+          listPage = 1;
+          await loadTickets();
+
+        } catch (err) {
+          console.error(err);
+          showToast(err.message || 'Failed to submit support ticket.', 'error');
+        } finally {
+          submitBtn.disabled = false;
+          submitBtn.textContent = '🚀 Submit Ticket';
+        }
+      });
+
+      // Back to List
+      $('backToListBtn').addEventListener('click', () => {
+        // Clear history URL param
+        history.replaceState(null, '', '/public/tickets/');
+        activeTicketId = null;
+        
+        $('chatView').style.display = 'none';
+        $('listView').style.display = 'block';
+        
+        loadTickets();
+      });
+
+      // Send Reply form
+      $('replyForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const message = $('replyMsg').value.trim();
+        if (!message) return;
+
+        const sendBtn = $('sendReplyBtn');
+        sendBtn.disabled = true;
+
+        try {
+          await api.post(`/tickets/${activeTicketId}/reply`, { message });
+          $('replyMsg').value = '';
+          
+          // Reload chat
+          await viewTicketChat(activeTicketId);
+        } catch (err) {
+          showToast(err.message || 'Failed to send reply.', 'error');
+        } finally {
+          sendBtn.disabled = false;
+        }
+      });
+    })();
+
+    // Load ticket rows list
+    async function loadTickets() {
+      $('ticketsContainer').innerHTML = `<div class="skeleton-card" style="height: 100px;"></div>`;
+      
+      try {
+        const res = await api.get('/tickets', { page: listPage, limit: 10 });
+        const data = res.data || res;
+        const tickets = data.tickets || [];
+        const pagination = data.pagination || {};
+
+        if (tickets.length === 0) {
+          $('ticketsContainer').innerHTML = `
+            <div class="empty-state">
+              📋 You have no active support tickets. Click 'New Ticket' to request support.
+            </div>`;
+          $('listPagination').style.display = 'none';
+          return;
+        }
+
+        let html = '';
+        tickets.forEach(t => {
+          let badgeClass = 'badge-pending';
+          if (t.status === 'closed') badgeClass = 'badge-rejected';
+          else if (t.status === 'open') badgeClass = 'badge-approved';
+
+          const dateStr = new Date(t.created_at).toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+
+          html += `
+            <div class="ticket-card" data-id="${t.id}">
+              <div class="ticket-top">
+                <span class="ticket-title">${t.title}</span>
+                <span class="ticket-category">${t.category}</span>
+              </div>
+              <div class="ticket-footer">
+                <span>Created: ${dateStr}</span>
+                <span class="badge ${badgeClass}">${t.status}</span>
+              </div>
+            </div>
+          `;
+        });
+        $('ticketsContainer').innerHTML = html;
+
+        // Bind clicks to rows
+        document.querySelectorAll('.ticket-card').forEach(card => {
+          card.addEventListener('click', async () => {
+            const id = card.dataset.id;
+            await viewTicketChat(id);
+          });
+        });
+
+        // Pagination
+        if (pagination.pages > 1) {
+          $('listPagination').style.display = 'flex';
+          let pagHtml = '';
+          for (let i = 1; i <= pagination.pages; i++) {
+            pagHtml += `<button class="page-btn ${i === pagination.page ? 'active' : ''}" data-page="${i}">${i}</button>`;
+          }
+          $('listPagination').innerHTML = pagHtml;
+
+          $('listPagination').querySelectorAll('.page-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+              listPage = parseInt(btn.dataset.page, 10);
+              await loadTickets();
+            });
+          });
+        } else {
+          $('listPagination').style.display = 'none';
+        }
+
+      } catch (err) {
+        console.error(err);
+        $('ticketsContainer').innerHTML = `<div style="text-align:center; padding:20px; color:var(--danger)">Failed to load tickets.</div>`;
+      }
+    }
+
+    // View specific ticket replies timeline
+    async function viewTicketChat(ticketId) {
+      activeTicketId = ticketId;
+      $('listView').style.display = 'none';
+      $('chatView').style.display = 'block';
+
+      // Set URL query param silently
+      history.replaceState(null, '', `?id=${ticketId}`);
+
+      $('chatMessages').innerHTML = `<div class="skeleton-card" style="height: 120px;"></div>`;
+      $('chatTitle').textContent = 'Loading Ticket...';
+      $('chatDesc').textContent = '';
+      $('chatScreenshot').style.display = 'none';
+
+      try {
+        const res = await api.get(`/tickets/${ticketId}`);
+        const ticket = res.data || res;
+
+        // Set Ticket header details
+        $('chatTitle').textContent = ticket.title;
+        $('chatDesc').textContent = ticket.description;
+        $('chatCategory').textContent = `Category: ${ticket.category.toUpperCase()}`;
+        
+        const badge = $('chatStatusBadge');
+        badge.textContent = ticket.status;
+        badge.className = 'badge';
+        if (ticket.status === 'open') {
+          badge.classList.add('badge-approved');
+          $('replyArea').style.display = 'block';
+        } else {
+          badge.classList.add('badge-rejected'); // closed
+          $('replyArea').style.display = 'none';
+        }
+
+        if (ticket.screenshot_url) {
+          $('chatScreenshot').href = ticket.screenshot_url;
+          $('chatScreenshot').style.display = 'inline-block';
+        } else {
+          $('chatScreenshot').style.display = 'none';
+        }
+
+        // Render Chat timeline
+        const replies = ticket.replies || [];
+        
+        // Build base description bubble if no replies or as first bubble
+        let chatHtml = `
+          <div class="msg-bubble admin" style="background: rgba(255,255,255,0.02)">
+            <span class="msg-sender-tag" style="background: var(--muted)">System System</span>
+            <div>Ticket opened. Subject: "${ticket.title}"</div>
+            <div class="msg-meta">${new Date(ticket.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+          </div>
+        `;
+
+        replies.forEach(r => {
+          const isAdminMsg = (r.sender_type === 'admin');
+          const bubbleClass = isAdminMsg ? 'admin' : 'player';
+          const senderName = r.sender_username || (isAdminMsg ? 'Admin' : 'You');
+          
+          let senderTagHtml = '';
+          if (isAdminMsg) {
+            senderTagHtml = `<span class="msg-sender-tag" style="background: var(--gold); color: #000;">🛡️ ${senderName} (Support)</span>`;
+          }
+
+          chatHtml += `
+            <div class="msg-bubble ${bubbleClass}">
+              ${senderTagHtml}
+              <div>${escapeHTML(r.message)}</div>
+              <div class="msg-meta">${new Date(r.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+            </div>
+          `;
+        });
+
+        $('chatMessages').innerHTML = chatHtml;
+
+        // Auto-scroll chat to bottom
+        window.scrollTo(0, document.body.scrollHeight);
+
+      } catch (err) {
+        console.error(err);
+        showToast(err.message || 'Failed to retrieve ticket chat.', 'error');
+        $('chatTitle').textContent = 'Error Loading Ticket';
+      }
+    }
+
+    function escapeHTML(str) {
+      return str.replace(/[&<>'"]/g, 
+        tag => ({
+          '&': '&amp;',
+          '<': '&lt;',
+          '>': '&gt;',
+          "'": '&#39;',
+          '"': '&quot;'
+        }[tag] || tag)
+      );
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="description" content="Create or join a team, manage teammates, and coordinate squad matches for ArenaX tournaments.">
+  <meta name="theme-color" content="#0a0a0f">
+  <title>My Team - ArenaX</title>
+  <link rel="manifest" href="/manifest.json">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/assets/css/global.css">
+  <link rel="stylesheet" href="/assets/css/components.css">
+  <style>
+    body {
+      padding-top: 60px;
+      padding-bottom: 80px;
+      background-color: var(--bg-primary);
+      min-height: 100vh;
+    }
+
+    .main-container {
+      max-width: 540px;
+      margin: 0 auto;
+      padding: 16px;
+    }
+
+    /* ──── TOAST ──── */
+    #toast-container { position: fixed; top: 20px; right: 16px; left: 16px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; pointer-events: none; }
+    .toast { background: var(--bg-card); border: 1px solid var(--border-glass); border-radius: 12px; padding: 14px 18px; font-size: 14px; font-weight: 500; display: flex; align-items: center; gap: 10px; box-shadow: 0 8px 32px rgba(0,0,0,0.5); pointer-events: all; animation: slideIn .3s ease; }
+    .toast.success { border-color: var(--success); }
+    .toast.error   { border-color: var(--danger); }
+    .toast.info    { border-color: var(--primary); }
+    @keyframes slideIn { from { opacity:0; transform:translateY(-12px); } to { opacity:1; transform:translateY(0); } }
+    @keyframes fadeOut { from { opacity:1; } to { opacity:0; transform:translateY(-8px); } }
+
+    /* Team Layout Cards */
+    .team-header-card {
+      background: linear-gradient(135deg, rgba(124,58,237,0.12) 0%, rgba(6,182,212,0.06) 100%);
+      border: 1px solid rgba(124,58,237,0.2);
+      border-radius: 20px;
+      padding: 24px;
+      margin-bottom: 20px;
+      text-align: center;
+      position: relative;
+    }
+
+    .team-badge-large {
+      width: 80px;
+      height: 80px;
+      border-radius: 24px;
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      display: grid;
+      place-items: center;
+      font-size: 36px;
+      margin: 0 auto 16px;
+      box-shadow: 0 8px 24px rgba(124,58,237,0.3);
+    }
+
+    .team-title {
+      font-family: var(--font-display);
+      font-size: 24px;
+      font-weight: 800;
+      color: #fff;
+    }
+
+    .team-meta {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-top: 6px;
+    }
+
+    .code-box {
+      margin-top: 16px;
+      display: inline-flex;
+      align-items: center;
+      background: var(--bg-primary);
+      border: 1px solid var(--border-glass);
+      border-radius: 12px;
+      padding: 8px 14px;
+      gap: 12px;
+    }
+
+    .code-text {
+      font-family: var(--font-display);
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--secondary-light);
+      letter-spacing: 0.1em;
+    }
+
+    .copy-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 14px;
+      padding: 2px;
+      color: var(--text-secondary);
+      transition: color 0.2s;
+    }
+
+    .copy-btn:hover {
+      color: #fff;
+    }
+
+    /* Members list */
+    .member-item {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-glass);
+      border-radius: 16px;
+      padding: 14px 16px;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .member-avatar {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--border-glass);
+      display: grid;
+      place-items: center;
+      font-weight: 700;
+      color: #fff;
+      background-size: cover;
+      background-position: center;
+      flex-shrink: 0;
+    }
+
+    .member-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .member-name-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .member-name {
+      font-size: 15px;
+      font-weight: 600;
+      color: #fff;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .captain-tag {
+      font-size: 9px;
+      font-weight: 700;
+      background: var(--gold);
+      color: #000;
+      padding: 1px 6px;
+      border-radius: 4px;
+      text-transform: uppercase;
+    }
+
+    .member-uid {
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-top: 2px;
+    }
+
+    .kick-btn {
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.2);
+      color: var(--danger);
+      font-size: 12px;
+      font-weight: 600;
+      padding: 6px 10px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .kick-btn:hover {
+      background: var(--danger);
+      color: #fff;
+    }
+
+    /* Tab switcher for no team view */
+    .no-team-card {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-glass);
+      border-radius: 20px;
+      padding: 24px;
+    }
+
+    .no-team-tabs {
+      display: flex;
+      background: var(--bg-primary);
+      border: 1px solid var(--border-glass);
+      border-radius: 12px;
+      padding: 4px;
+      gap: 4px;
+      margin-bottom: 24px;
+    }
+
+    .no-team-tab {
+      flex: 1;
+      padding: 10px 4px;
+      border: none;
+      background: transparent;
+      color: var(--text-secondary);
+      font-family: var(--font-display);
+      font-size: 14px;
+      font-weight: 600;
+      border-radius: 9px;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-align: center;
+    }
+
+    .no-team-tab.active {
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      color: #fff;
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    .form-group {
+      margin-bottom: 18px;
+    }
+
+    .form-label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      margin-bottom: 8px;
+    }
+
+    .form-control {
+      width: 100%;
+      background: var(--bg-primary);
+      border: 1px solid var(--border-glass);
+      border-radius: 10px;
+      padding: 12px 14px;
+      color: #fff;
+      font-family: var(--font-body);
+      font-size: 14px;
+      transition: border-color 0.2s;
+    }
+
+    .form-control:focus {
+      outline: none;
+      border-color: var(--primary);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top App Navbar -->
+  <nav class="navbar">
+    <a href="/public/dashboard/" class="navbar-logo">ArenaX</a>
+    <div class="navbar-spacer"></div>
+    <div class="navbar-actions">
+      <!-- Notification Bell -->
+      <button class="notification-bell" id="bellBtn" aria-label="Notifications" aria-haspopup="true">
+        🔔
+        <span class="badge badge-danger" id="bellBadge" style="display:none; position:absolute; top:-2px; right:-2px; padding:0.1rem 0.35rem; font-size:9px;">0</span>
+      </button>
+      <div class="notif-dropdown" id="notifDropdown" style="position:fixed; top:54px; right:12px; width:320px; background:var(--bg-secondary); border:1px solid var(--border-glass); border-radius:12px; display:none; flex-direction:column; overflow:hidden; box-shadow:var(--shadow-lg); z-index:var(--z-dropdown);"></div>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="main-container">
+
+    <!-- Loading State -->
+    <div id="loadingView" style="text-align: center; padding: 48px 0;">
+      <div class="skeleton-card" style="height: 180px; margin-bottom: 16px;"></div>
+      <div class="skeleton-card" style="height: 240px;"></div>
+    </div>
+
+    <!-- Active Team View (Hidden by default) -->
+    <div id="activeTeamView" style="display: none;">
+      <div class="team-header-card">
+        <div class="team-badge-large" id="teamBadge">🛡️</div>
+        <h2 class="team-title" id="teamName">Team Alpha</h2>
+        <div class="team-meta" id="teamFormat">Format: Duo (Max 2 Members)</div>
+        
+        <div class="code-box">
+          <span class="code-text" id="teamCode">AX987654</span>
+          <button class="copy-btn" id="copyCodeBtn" title="Copy Invite Code">📋</button>
+        </div>
+      </div>
+
+      <div class="section-title">
+        <span>Team Members (<span id="memberCount">1</span>)</span>
+      </div>
+      <div id="membersList">
+        <!-- Members populated dynamically -->
+      </div>
+
+      <!-- Destructive actions -->
+      <div class="mt-8" style="padding: 0 8px;">
+        <button id="leaveTeamBtn" class="btn btn-danger w-full" style="display: none;">🏃 Leave Team</button>
+        <button id="disbandTeamBtn" class="btn btn-danger w-full" style="display: none;">💥 Disband Team</button>
+      </div>
+    </div>
+
+    <!-- No Team View (Hidden by default) -->
+    <div id="noTeamView" style="display: none;">
+      <div class="no-team-card">
+        <div class="no-team-tabs">
+          <button class="no-team-tab active" data-tab="join">Join Team</button>
+          <button class="no-team-tab" data-tab="create">Create Team</button>
+        </div>
+
+        <!-- Join Team Tab Content -->
+        <div class="tab-content active" id="tabJoin">
+          <p style="font-size: 13.5px; color: var(--text-secondary); margin-bottom: 20px; text-align: center;">
+            Enter an 8-character invite code shared by your captain to join their team.
+          </p>
+          <form id="joinTeamForm">
+            <div class="form-group">
+              <label class="form-label" for="inviteCode">Invite Code</label>
+              <input type="text" id="inviteCode" class="form-control" placeholder="E.g. A1B2C3D4" maxlength="8" required style="text-transform: uppercase;">
+            </div>
+            <button type="submit" id="joinBtn" class="btn btn-primary w-full mt-4">🤝 Join Team</button>
+          </form>
+        </div>
+
+        <!-- Create Team Tab Content -->
+        <div class="tab-content" id="tabCreate">
+          <p style="font-size: 13.5px; color: var(--text-secondary); margin-bottom: 20px; text-align: center;">
+            Create a new team. Once created, you can invite your teammates by sharing the team code.
+          </p>
+          <form id="createTeamForm">
+            <div class="form-group">
+              <label class="form-label" for="newTeamName">Team Name</label>
+              <input type="text" id="newTeamName" class="form-control" placeholder="E.g. Team Alpha" minlength="3" maxlength="50" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="newTeamFormat">Team Format</label>
+              <select id="newTeamFormat" class="form-control" required style="background: var(--bg-primary);">
+                <option value="duo">Duo (2 Players)</option>
+                <option value="squad" selected>Squad (4 Players)</option>
+              </select>
+            </div>
+            <button type="submit" id="createBtn" class="btn btn-primary w-full mt-4">🛡️ Create Team</button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Bottom Navigation Bar -->
+  <nav class="bottom-nav">
+    <a href="/public/dashboard/" class="bottom-nav-item">
+      <span class="nav-icon">🏠</span>
+      <span class="nav-label">Home</span>
+    </a>
+    <a href="/public/tournaments/" class="bottom-nav-item">
+      <span class="nav-icon">🏆</span>
+      <span class="nav-label">Matches</span>
+    </a>
+    <a href="/public/wallet/" class="bottom-nav-item">
+      <span class="nav-icon">💳</span>
+      <span class="nav-label">Wallet</span>
+    </a>
+    <a href="/public/profile/" class="bottom-nav-item">
+      <span class="nav-icon">👤</span>
+      <span class="nav-label">Profile</span>
+    </a>
+  </nav>
+
+  <!-- Toast Container -->
+  <div id="toast-container"></div>
+
+  <script type="module">
+    import { api } from '/assets/js/api.js';
+    import { auth } from '/assets/js/auth.js';
+    import { NotificationManager } from '/assets/js/notifications.js';
+
+    const $ = id => document.getElementById(id);
+
+    // Global team reference for actions
+    let activeTeamId = null;
+
+    // Toast helper
+    function showToast(message, type = 'info') {
+      const container = $('toast-container');
+      const toast = document.createElement('div');
+      toast.className = `toast ${type}`;
+      toast.textContent = message;
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.style.animation = 'fadeOut 0.3s ease forwards';
+        setTimeout(() => toast.remove(), 300);
+      }, 3000);
+    }
+
+    // App Initialization
+    (async () => {
+      await auth.init();
+      const user = auth.requireAuth();
+      if (!user) return;
+
+      // Init notification bell
+      const notifMgr = new NotificationManager($('bellBtn'), $('bellBadge'), $('notifDropdown'));
+      notifMgr.init();
+
+      // Load active team details
+      await loadTeamData(user.id);
+
+      // Tab selector logic for no team view
+      document.querySelectorAll('.no-team-tab').forEach(tab => {
+        tab.addEventListener('click', (e) => {
+          document.querySelectorAll('.no-team-tab').forEach(t => t.classList.remove('active'));
+          document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+          
+          tab.classList.add('active');
+          const targetId = tab.dataset.tab === 'join' ? 'tabJoin' : 'tabCreate';
+          $(targetId).classList.add('active');
+        });
+      });
+
+      // Handle copy invite code
+      $('copyCodeBtn').addEventListener('click', () => {
+        const code = $('teamCode').textContent;
+        navigator.clipboard.writeText(code).then(() => {
+          showToast('Invite code copied to clipboard!', 'success');
+        }).catch(() => {
+          showToast('Failed to copy. Invite code: ' + code, 'info');
+        });
+      });
+
+      // Join Team Form Submission
+      $('joinTeamForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const code = $('inviteCode').value.trim();
+        if (code.length !== 8) {
+          showToast('Invite code must be exactly 8 characters.', 'error');
+          return;
+        }
+
+        const joinBtn = $('joinBtn');
+        joinBtn.disabled = true;
+        joinBtn.textContent = 'Joining...';
+
+        try {
+          await api.post('/teams/join', { code });
+          showToast('Joined team successfully!', 'success');
+          // Reload
+          await loadTeamData(user.id);
+        } catch (err) {
+          console.error(err);
+          showToast(err.message || 'Failed to join team.', 'error');
+        } finally {
+          joinBtn.disabled = false;
+          joinBtn.textContent = '🤝 Join Team';
+        }
+      });
+
+      // Create Team Form Submission
+      $('createTeamForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const name = $('newTeamName').value.trim();
+        const matchType = $('newTeamFormat').value;
+
+        const createBtn = $('createBtn');
+        createBtn.disabled = true;
+        createBtn.textContent = 'Creating...';
+
+        try {
+          await api.post('/teams/create', { name, matchType });
+          showToast('Team created successfully!', 'success');
+          // Reload
+          await loadTeamData(user.id);
+        } catch (err) {
+          console.error(err);
+          showToast(err.message || 'Failed to create team.', 'error');
+        } finally {
+          createBtn.disabled = false;
+          createBtn.textContent = '🛡️ Create Team';
+        }
+      });
+
+      // Leave Team Button Click
+      $('leaveTeamBtn').addEventListener('click', async () => {
+        if (confirm('Are you sure you want to leave this team?')) {
+          try {
+            await api.post('/teams/leave');
+            showToast('Left team successfully.', 'success');
+            await loadTeamData(user.id);
+          } catch (err) {
+            showToast(err.message || 'Failed to leave team.', 'error');
+          }
+        }
+      });
+
+      // Disband Team Button Click
+      $('disbandTeamBtn').addEventListener('click', async () => {
+        if (confirm('Are you sure you want to disband this team? All members will be removed.')) {
+          try {
+            await api.delete(`/teams/${activeTeamId}`);
+            showToast('Team disbanded.', 'success');
+            await loadTeamData(user.id);
+          } catch (err) {
+            showToast(err.message || 'Failed to disband team.', 'error');
+          }
+        }
+      });
+    })();
+
+    // Load active/inactive team states
+    async function loadTeamData(myUserId) {
+      $('loadingView').style.display = 'block';
+      $('activeTeamView').style.display = 'none';
+      $('noTeamView').style.display = 'none';
+
+      try {
+        const team = await api.get('/teams/my');
+        
+        if (!team) {
+          // No active team
+          $('noTeamView').style.display = 'block';
+          return;
+        }
+
+        // Active Team State
+        activeTeamId = team.id;
+        $('teamName').textContent = team.name;
+        $('teamCode').textContent = team.code;
+        $('teamFormat').textContent = `Format: ${team.max_members === 2 ? 'Duo' : 'Squad'} (Max ${team.max_members} Members)`;
+        $('memberCount').textContent = team.members.length;
+
+        // Render member list
+        const isCaptain = (team.captain_id === myUserId);
+        
+        let membersHtml = '';
+        team.members.forEach(member => {
+          const isMe = (member.user_id === myUserId);
+          const isMemberCaptain = (member.user_id === team.captain_id);
+          
+          let avatarContent = '';
+          if (member.avatar_url) {
+            avatarContent = `style="background-image: url(${member.avatar_url});"`;
+          }
+
+          let actionBtn = '';
+          // Show kick button if current user is captain, and the teammate is not captain (themselves)
+          if (isCaptain && !isMemberCaptain) {
+            actionBtn = `<button class="kick-btn" data-uid="${member.user_id}">Kick</button>`;
+          }
+
+          membersHtml += `
+            <div class="member-item">
+              <div class="member-avatar" ${avatarContent}>
+                ${member.avatar_url ? '' : (member.username || 'P').charAt(0).toUpperCase()}
+              </div>
+              <div class="member-info">
+                <div class="member-name-row">
+                  <span class="member-name">${member.username} ${isMe ? '(You)' : ''}</span>
+                  ${isMemberCaptain ? '<span class="captain-tag">Captain</span>' : ''}
+                </div>
+                <div class="member-uid">UID: ${member.ff_uid || 'No UID'}</div>
+              </div>
+              ${actionBtn}
+            </div>
+          `;
+        });
+        $('membersList').innerHTML = membersHtml;
+
+        // Bind kick events
+        if (isCaptain) {
+          document.querySelectorAll('.kick-btn').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+              const uid = btn.dataset.uid;
+              if (confirm('Are you sure you want to kick this member?')) {
+                try {
+                  await api.delete(`/teams/${activeTeamId}/members/${uid}`);
+                  showToast('Member removed.', 'success');
+                  await loadTeamData(myUserId);
+                } catch (err) {
+                  showToast(err.message || 'Failed to kick member.', 'error');
+                }
+              }
+            });
+          });
+        }
+
+        // Configure leaves / disband buttons
+        if (isCaptain) {
+          $('disbandTeamBtn').style.display = 'block';
+          $('leaveTeamBtn').style.display = 'none';
+        } else {
+          $('leaveTeamBtn').style.display = 'block';
+          $('disbandTeamBtn').style.display = 'none';
+        }
+
+        $('activeTeamView').style.display = 'block';
+
+      } catch (err) {
+        console.error(err);
+        showToast('Failed to load team data.', 'error');
+      } finally {
+        $('loadingView').style.display = 'none';
+      }
+    }
+  </script>
+</body>
+</html>

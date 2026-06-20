@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tournaments - ArenaX</title>
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#7c3aed">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/assets/css/global.css">
+  <link rel="stylesheet" href="/assets/css/components.css">
+  <style>
+    body {
+      padding-top: 60px;
+      padding-bottom: 70px;
+      background-color: var(--bg-primary);
+    }
+
+    .main-container {
+      max-width: 540px;
+      margin: 0 auto;
+      padding: 16px;
+    }
+
+    /* Filter Bar Section */
+    .filter-section {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-glass);
+      border-radius: 12px;
+      padding: 12px;
+      margin-bottom: 16px;
+    }
+
+    .search-input-group {
+      margin-bottom: 12px;
+    }
+
+    .filter-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 10px;
+    }
+
+    .filter-group:last-child {
+      margin-bottom: 0;
+    }
+
+    .filter-btn {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--border-glass);
+      color: var(--text-secondary);
+      padding: 6px 12px;
+      font-size: 12px;
+      font-weight: 600;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .filter-btn.active {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: #fff;
+      box-shadow: 0 0 10px var(--primary-glow);
+    }
+
+    .tournaments-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      background: var(--bg-secondary);
+      border: 1px dashed var(--border-glass);
+      border-radius: 16px;
+      color: var(--text-secondary);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Navbar -->
+  <nav class="navbar">
+    <a href="/public/dashboard/" class="navbar-logo">ArenaX</a>
+    <div class="navbar-spacer"></div>
+    <div class="navbar-actions">
+      <button class="notification-bell" id="bellBtn">
+        🔔
+        <span class="badge badge-danger" id="bellBadge" style="display:none; position:absolute; top:-2px; right:-2px; padding:0.1rem 0.35rem; font-size:9px;">0</span>
+      </button>
+      <div class="notif-dropdown" id="notifDropdown" style="position:fixed; top:54px; right:12px; width:320px; background:var(--bg-secondary); border:1px solid var(--border-glass); border-radius:12px; display:none; flex-direction:column; overflow:hidden; box-shadow:var(--shadow-lg); z-index:var(--z-dropdown);"></div>
+    </div>
+  </nav>
+
+  <!-- Content -->
+  <main class="main-container">
+
+    <!-- Search & Filters -->
+    <div class="filter-section">
+      <!-- Search -->
+      <div class="form-group search-input-group">
+        <input type="text" id="searchInput" class="form-input" placeholder="🔍 Search matches by name...">
+      </div>
+
+      <!-- Game filters -->
+      <div class="filter-group">
+        <button class="filter-btn active" data-filter="game" data-value="">All Games</button>
+        <button class="filter-btn" data-filter="game" data-value="free_fire">Free Fire</button>
+        <button class="filter-btn" data-filter="game" data-value="bgmi">BGMI</button>
+      </div>
+
+      <!-- Format filters -->
+      <div class="filter-group">
+        <button class="filter-btn active" data-filter="matchType" data-value="">All Formats</button>
+        <button class="filter-btn" data-filter="matchType" data-value="solo">Solo</button>
+        <button class="filter-btn" data-filter="matchType" data-value="duo">Duo</button>
+        <button class="filter-btn" data-filter="matchType" data-value="squad">Squad</button>
+      </div>
+    </div>
+
+    <!-- Tournaments List -->
+    <div class="tournaments-grid" id="tournamentsGrid">
+      <div class="skeleton-card" style="height:180px;"></div>
+      <div class="skeleton-card" style="height:180px;"></div>
+    </div>
+
+  </main>
+
+  <!-- Bottom Navigation -->
+  <nav class="bottom-nav">
+    <a href="/public/dashboard/" class="bottom-nav-item">
+      <span class="nav-icon">🏠</span>
+      <span class="nav-label">Home</span>
+    </a>
+    <a href="/public/tournaments/" class="bottom-nav-item active">
+      <span class="nav-icon">🏆</span>
+      <span class="nav-label">Matches</span>
+    </a>
+    <a href="/public/wallet/" class="bottom-nav-item">
+      <span class="nav-icon">💳</span>
+      <span class="nav-label">Wallet</span>
+    </a>
+    <a href="/public/profile/" class="bottom-nav-item">
+      <span class="nav-icon">👤</span>
+      <span class="nav-label">Profile</span>
+    </a>
+  </nav>
+
+  <script type="module">
+    import { api } from '/assets/js/api.js';
+    import { auth } from '/assets/js/auth.js';
+    import { NotificationManager } from '/assets/js/notifications.js';
+
+    const $ = id => document.getElementById(id);
+
+    auth.requireAuth();
+
+    const notifMgr = new NotificationManager($('bellBtn'), $('bellBadge'), $('notifDropdown'));
+    notifMgr.init();
+
+    // Filters state
+    const filters = {
+      game: '',
+      matchType: '',
+      search: '',
+    };
+
+    let allTournaments = [];
+
+    async function loadTournaments() {
+      try {
+        const res = await api.get('/tournaments');
+        allTournaments = res.data?.tournaments || res.tournaments || [];
+        renderTournaments();
+      } catch (err) {
+        console.error('Failed to load tournaments:', err);
+        $('tournamentsGrid').innerHTML = `
+          <div class="empty-state">
+            Failed to load matches. Please refresh the page.
+          </div>`;
+      }
+    }
+
+    function renderTournaments() {
+      // Apply filters locally in Javascript
+      const filtered = allTournaments.filter(t => {
+        const matchGame = !filters.game || t.game === filters.game;
+        const matchType = !filters.matchType || t.match_type === filters.matchType;
+        const matchSearch = !filters.search || t.title.toLowerCase().includes(filters.search.toLowerCase());
+        return matchGame && matchType && matchSearch;
+      });
+
+      if (filtered.length === 0) {
+        $('tournamentsGrid').innerHTML = `
+          <div class="empty-state">
+            No matches found matching your filters.
+          </div>`;
+        return;
+      }
+
+      $('tournamentsGrid').innerHTML = filtered.map(t => renderCard(t)).join('');
+    }
+
+    function renderCard(t) {
+      const entryFee = parseFloat(t.entry_fee) === 0 ? 'FREE' : `₹${parseFloat(t.entry_fee).toFixed(0)}`;
+      const timeStr = new Date(t.match_time).toLocaleDateString([], { month: 'short', day: 'numeric' }) + ' ' +
+                      new Date(t.match_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      const fillPercent = Math.min(100, Math.floor((t.filled_slots / t.total_slots) * 100));
+
+      return `
+        <div class="card-tournament">
+          <div class="tournament-banner-wrapper">
+            <img src="${t.banner_url || '/assets/css/FF_banner.jpg'}" onerror="this.src='https://images.unsplash.com/photo-1542751371-adc38448a05e?w=500'" alt="Banner">
+            <div class="tournament-game-badge">${t.game.replace('_', ' ')}</div>
+          </div>
+          <div class="tournament-card-body">
+            <a href="/public/tournaments/detail.html?id=${t.id}"><h3 class="tournament-title">${t.title}</h3></a>
+            <div class="tournament-stats-grid">
+              <div class="tournament-stat">
+                <span class="stat-label">Entry Fee</span>
+                <span class="stat-value text-cyan">${entryFee}</span>
+              </div>
+              <div class="tournament-stat">
+                <span class="stat-label">Prize Pool</span>
+                <span class="stat-value text-accent">₹${parseFloat(t.prize_pool).toFixed(0)}</span>
+              </div>
+              <div class="tournament-stat">
+                <span class="stat-label">Per Kill</span>
+                <span class="stat-value text-success">₹${parseFloat(t.per_kill_reward).toFixed(0)}</span>
+              </div>
+              <div class="tournament-stat">
+                <span class="stat-label">Format</span>
+                <span class="stat-value">${t.match_type.toUpperCase()}</span>
+              </div>
+            </div>
+
+            <!-- Progress bar -->
+            <div style="margin-bottom: 12px;">
+              <div style="display:flex; justify-content:space-between; font-size:11px; margin-bottom:4px; color:var(--text-secondary);">
+                <span>Slots Filled</span>
+                <span>${t.filled_slots}/${t.total_slots} (${fillPercent}%)</span>
+              </div>
+              <div style="width:100%; height:6px; background:rgba(255,255,255,0.06); border-radius:3px; overflow:hidden;">
+                <div style="width:${fillPercent}%; height:100%; background:linear-gradient(90deg, var(--primary), var(--secondary)); border-radius:3px;"></div>
+              </div>
+            </div>
+
+            <div class="tournament-footer">
+              <span class="badge ${t.status === 'registration_open' ? 'badge-success' : 'badge-purple'}">${t.status.replace('_', ' ')}</span>
+              <span style="font-size:11px; color:var(--text-secondary);">⏰ ${timeStr}</span>
+            </div>
+          </div>
+        </div>`;
+    }
+
+    // Attach filter button click handlers
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const type = btn.dataset.filter;
+        const val = btn.dataset.value;
+
+        // Toggle active class inside button group
+        document.querySelectorAll(`.filter-btn[data-filter="${type}"]`).forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+
+        // Update filters state & rerender
+        filters[type] = val;
+        renderTournaments();
+      });
+    });
+
+    $('searchInput').addEventListener('input', (e) => {
+      filters.search = e.target.value;
+      renderTournaments();
+    });
+
+    loadTournaments();
+  </script>
+</body>
+</html>

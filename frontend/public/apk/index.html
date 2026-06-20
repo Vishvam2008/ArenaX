@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="description" content="Download the latest ArenaX Android App APK for smooth gameplay, instant room entries, and faster updates.">
+  <meta name="theme-color" content="#0a0a0f">
+  <title>Download Android App - ArenaX</title>
+  <link rel="manifest" href="/manifest.json">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/assets/css/global.css">
+  <link rel="stylesheet" href="/assets/css/components.css">
+  <style>
+    body {
+      padding-top: 60px;
+      padding-bottom: 40px;
+      background-color: var(--bg-primary);
+      min-height: 100vh;
+    }
+
+    .main-container {
+      max-width: 540px;
+      margin: 0 auto;
+      padding: 16px;
+    }
+
+    /* APK Intro Card */
+    .apk-card {
+      background: linear-gradient(135deg, rgba(16,185,129,0.08) 0%, rgba(6,182,212,0.03) 100%);
+      border: 1px solid rgba(16,185,129,0.2);
+      border-radius: 24px;
+      padding: 32px 24px;
+      text-align: center;
+      margin-bottom: 24px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .apk-glow {
+      position: absolute;
+      top: -30px;
+      right: -30px;
+      width: 140px;
+      height: 140px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(16,185,129,0.2) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .android-icon-pulsing {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      background: rgba(16,185,129,0.15);
+      border: 2px solid var(--success);
+      font-size: 40px;
+      display: grid;
+      place-items: center;
+      margin: 0 auto 20px;
+      box-shadow: 0 0 20px rgba(16,185,129,0.3);
+      animation: pulseGlow 2s infinite alternate;
+    }
+
+    @keyframes pulseGlow {
+      0% { box-shadow: 0 0 10px rgba(16,185,129,0.2); transform: scale(1); }
+      100% { box-shadow: 0 0 24px rgba(16,185,129,0.5); transform: scale(1.05); }
+    }
+
+    .apk-title {
+      font-family: var(--font-display);
+      font-size: 24px;
+      font-weight: 800;
+      color: #fff;
+    }
+
+    .apk-version-label {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-top: 6px;
+    }
+
+    .btn-download-apk {
+      background: linear-gradient(135deg, var(--success), #059669);
+      color: #fff;
+      font-weight: 700;
+      padding: 16px;
+      font-size: 16px;
+      border-radius: 14px;
+      margin-top: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      box-shadow: 0 8px 20px rgba(16,185,129,0.3);
+      transition: all 0.2s;
+    }
+
+    .btn-download-apk:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 28px rgba(16,185,129,0.4);
+    }
+
+    /* Changelog box */
+    .changelog-card {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-glass);
+      border-radius: 20px;
+      padding: 20px;
+      margin-bottom: 24px;
+    }
+
+    .changelog-title {
+      font-family: var(--font-display);
+      font-size: 16px;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 12px;
+    }
+
+    .changelog-text {
+      font-size: 13.5px;
+      color: var(--text-secondary);
+      line-height: 1.6;
+      white-space: pre-wrap;
+    }
+
+    /* Installation Steps */
+    .steps-card {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-glass);
+      border-radius: 20px;
+      padding: 20px;
+    }
+
+    .step-item {
+      display: flex;
+      gap: 14px;
+      margin-bottom: 16px;
+    }
+
+    .step-item:last-child {
+      margin-bottom: 0;
+    }
+
+    .step-num {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      background: var(--bg-primary);
+      border: 1px solid var(--border-glass);
+      display: grid;
+      place-items: center;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--success);
+      flex-shrink: 0;
+    }
+
+    .step-info {
+      font-size: 13px;
+      line-height: 1.5;
+      color: var(--text-secondary);
+    }
+
+    .step-header {
+      font-weight: 600;
+      color: #fff;
+      margin-bottom: 2px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top App Navbar -->
+  <nav class="navbar">
+    <a href="/public/dashboard/" class="navbar-logo">ArenaX</a>
+    <div class="navbar-spacer"></div>
+    <div class="navbar-actions">
+      <!-- Back Button -->
+      <a href="/public/dashboard/" class="btn btn-ghost btn-xs">⬅️ Dashboard</a>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="main-container">
+    
+    <!-- APK Card -->
+    <div class="apk-card">
+      <div class="apk-glow"></div>
+      <div class="android-icon-pulsing">🤖</div>
+      <h2 class="apk-title">ArenaX for Android</h2>
+      <div class="apk-version-label" id="versionLabel">Fetching latest version...</div>
+      
+      <a href="#" id="downloadBtn" class="btn-download-apk" style="display: none;">
+        <span>📥 Download APK Binary</span>
+      </a>
+      
+      <div id="noApkText" style="margin-top: 24px; color: var(--text-secondary); display: none;">
+        No public APK release is currently available. Please use the PWA directly.
+      </div>
+    </div>
+
+    <!-- Changelog Box -->
+    <div class="changelog-card" id="changelogBox" style="display: none;">
+      <h3 class="changelog-title">What's New in this Version</h3>
+      <div class="changelog-text" id="changelogText">Changelog content...</div>
+    </div>
+
+    <!-- Installation Steps -->
+    <div class="steps-card">
+      <h3 class="changelog-title">How to Install ArenaX</h3>
+      
+      <div class="step-item">
+        <div class="step-num">1</div>
+        <div class="step-info">
+          <div class="step-header">Download the APK file</div>
+          Tap the download button above to grab the latest official APK installation binary.
+        </div>
+      </div>
+
+      <div class="step-item">
+        <div class="step-num">2</div>
+        <div class="step-info">
+          <div class="step-header">Enable "Unknown Sources"</div>
+          If prompted by Chrome or your system, allow installs from "unknown apps" in settings.
+        </div>
+      </div>
+
+      <div class="step-item">
+        <div class="step-num">3</div>
+        <div class="step-info">
+          <div class="step-header">Complete Installation</div>
+          Open the downloaded file and click "Install". Log in to enjoy competitive Free Fire!
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <script type="module">
+    import { api } from '/assets/js/api.js';
+
+    const $ = id => document.getElementById(id);
+
+    (async () => {
+      try {
+        const res = await api.get('/apk/latest');
+        const apk = res.data || res;
+
+        if (apk && apk.apk_url) {
+          $('versionLabel').innerHTML = `
+            <strong>Version ${apk.version_name}</strong> (Code ${apk.version_code})<br>
+            Released: ${new Date(apk.created_at).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })}
+          `;
+          
+          $('downloadBtn').href = apk.apk_url;
+          $('downloadBtn').style.display = 'flex';
+
+          if (apk.changelog) {
+            $('changelogText').textContent = apk.changelog;
+            $('changelogBox').style.display = 'block';
+          }
+        } else {
+          showNoRelease();
+        }
+      } catch (err) {
+        console.error(err);
+        showNoRelease();
+      }
+    })();
+
+    function showNoRelease() {
+      $('versionLabel').textContent = 'No active Android releases.';
+      $('noApkText').style.display = 'block';
+    }
+  </script>
+</body>
+</html>

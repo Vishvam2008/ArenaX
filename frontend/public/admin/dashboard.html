@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0a0a0f">
+  <title>Admin Dashboard - ArenaX Control Panel</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/assets/css/global.css">
+  <link rel="stylesheet" href="/assets/css/components.css">
+  <link rel="stylesheet" href="/assets/css/admin.css">
+  <style>
+    /* Admin Dashboard Grid Cards */
+    .dashboard-stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 20px;
+      margin-bottom: 28px;
+    }
+
+    .dashboard-stat-card {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-glass);
+      border-radius: 16px;
+      padding: 24px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .stat-label {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .stat-val {
+      font-family: var(--font-display);
+      font-size: 32px;
+      font-weight: 800;
+      color: #fff;
+      margin: 8px 0;
+    }
+
+    .stat-indicator {
+      font-size: 12px;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .stat-indicator.warning { color: var(--gold); }
+    .stat-indicator.danger { color: var(--danger); }
+    .stat-indicator.success { color: var(--success); }
+
+    /* Action Panels */
+    .action-panel-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 24px;
+    }
+
+    @media (min-width: 992px) {
+      .action-panel-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
+    .action-panel {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-glass);
+      border-radius: 16px;
+      padding: 20px;
+    }
+
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      border-bottom: 1px solid var(--border-glass);
+      padding-bottom: 12px;
+    }
+
+    .panel-title {
+      font-family: var(--font-display);
+      font-size: 16px;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .panel-body {
+      max-height: 380px;
+      overflow-y: auto;
+    }
+
+    .action-item-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.03);
+    }
+
+    .action-item-row:last-child {
+      border-bottom: none;
+    }
+
+    .action-item-info {
+      flex: 1;
+      min-width: 0;
+      padding-right: 12px;
+    }
+
+    .action-item-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #fff;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .action-item-meta {
+      font-size: 11.5px;
+      color: var(--text-secondary);
+      margin-top: 2px;
+    }
+
+    .quick-action-btn {
+      font-size: 12px;
+      font-weight: 600;
+      padding: 6px 12px;
+      border-radius: 6px;
+      text-decoration: none;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="admin-layout">
+    
+    <div class="admin-main">
+      <main class="admin-content">
+
+        <!-- Dashboard Stats Widgets -->
+        <div class="dashboard-stats-grid">
+          
+          <div class="dashboard-stat-card">
+            <div class="stat-label">Pending Deposits</div>
+            <div class="stat-val" id="statPendingDeposits">0</div>
+            <div class="stat-indicator warning" id="depositSubText">⚠️ Needs approval</div>
+          </div>
+
+          <div class="dashboard-stat-card">
+            <div class="stat-label">Pending Withdrawals</div>
+            <div class="stat-val" id="statPendingWithdrawals">0</div>
+            <div class="stat-indicator danger" id="withdrawalSubText">⚠️ Action required</div>
+          </div>
+
+          <div class="dashboard-stat-card">
+            <div class="stat-label">Results Pending</div>
+            <div class="stat-val" id="statPendingResults">0</div>
+            <div class="stat-indicator warning" id="resultsSubText">⚠️ Score reviews</div>
+          </div>
+
+          <div class="dashboard-stat-card">
+            <div class="stat-label">Open Tickets</div>
+            <div class="stat-val" id="statOpenTickets">0</div>
+            <div class="stat-indicator success" id="ticketsSubText">💬 Support Desk</div>
+          </div>
+
+        </div>
+
+        <!-- Action Panels -->
+        <div class="action-panel-grid">
+          
+          <!-- Pending Deposits Panel -->
+          <div class="action-panel">
+            <div class="panel-header">
+              <h3 class="panel-title">Pending Wallet Deposits</h3>
+              <a href="/public/admin/payments.html" style="font-size: 12px; color: var(--primary-light);">View All</a>
+            </div>
+            <div class="panel-body" id="pendingDepositsPanel">
+              <div style="text-align: center; padding: 20px; color: var(--text-secondary);">Loading...</div>
+            </div>
+          </div>
+
+          <!-- Pending Withdrawals Panel -->
+          <div class="action-panel">
+            <div class="panel-header">
+              <h3 class="panel-title">Pending Withdrawals</h3>
+              <a href="/public/admin/withdrawals.html" style="font-size: 12px; color: var(--primary-light);">View All</a>
+            </div>
+            <div class="panel-body" id="pendingWithdrawalsPanel">
+              <div style="text-align: center; padding: 20px; color: var(--text-secondary);">Loading...</div>
+            </div>
+          </div>
+
+          <!-- Pending Results Verification Panel -->
+          <div class="action-panel">
+            <div class="panel-header">
+              <h3 class="panel-title">Pending Match Score Reviews</h3>
+              <a href="/public/admin/results.html" style="font-size: 12px; color: var(--primary-light);">View All</a>
+            </div>
+            <div class="panel-body" id="pendingResultsPanel">
+              <div style="text-align: center; padding: 20px; color: var(--text-secondary);">Loading...</div>
+            </div>
+          </div>
+
+          <!-- Open Support Tickets Panel -->
+          <div class="action-panel">
+            <div class="panel-header">
+              <h3 class="panel-title">Open Support Tickets</h3>
+              <a href="/public/admin/tickets.html" style="font-size: 12px; color: var(--primary-light);">View All</a>
+            </div>
+            <div class="panel-body" id="openTicketsPanel">
+              <div style="text-align: center; padding: 20px; color: var(--text-secondary);">Loading...</div>
+            </div>
+          </div>
+
+        </div>
+
+      </main>
+    </div>
+
+  </div>
+
+  <div id="toast-container" style="position: fixed; top: 20px; right: 20px; z-index: 9999; pointer-events: none;"></div>
+
+  <script type="module">
+    import { api } from '/assets/js/api.js';
+    import { adminCore } from '/assets/js/admin-core.js';
+
+    const $ = id => document.getElementById(id);
+
+    function showToast(message, type = 'info') {
+      const container = $('toast-container');
+      const toast = document.createElement('div');
+      toast.className = `toast ${type}`;
+      toast.textContent = message;
+      toast.style.background = '#1a1a2e';
+      toast.style.border = '1px solid rgba(255,255,255,0.08)';
+      toast.style.borderRadius = '10px';
+      toast.style.padding = '12px 18px';
+      toast.style.color = '#fff';
+      toast.style.marginBottom = '10px';
+      toast.style.pointerEvents = 'all';
+      if (type === 'success') toast.style.borderColor = '#10b981';
+      if (type === 'error') toast.style.borderColor = '#ef4444';
+      
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.remove();
+      }, 3000);
+    }
+
+    // Initialize layout & guard auth
+    const admin = adminCore.requireAdmin();
+    if (admin) {
+      adminCore.initLayout('dashboard');
+      loadDashboardOverview();
+    }
+
+    async function loadDashboardOverview() {
+      try {
+        // Parallel fetches for efficiency
+        const [depRes, withRes, resRes, tktRes] = await Promise.all([
+          api.get('/admin/payments', { status: 'pending', limit: 10 }),
+          api.get('/admin/withdrawals', { status: 'pending', limit: 10 }),
+          api.get('/admin/results', { status: 'pending', limit: 10 }),
+          api.get('/admin/tickets', { status: 'open', limit: 10 })
+        ]);
+
+        const deposits = (depRes.data?.requests || depRes.requests) || [];
+        const withdrawals = (withRes.data?.withdrawals || withRes.withdrawals) || [];
+        const results = (resRes.data?.results || resRes.results) || [];
+        const tickets = (tktRes.data?.tickets || tktRes.tickets) || [];
+
+        // Set counts
+        $('statPendingDeposits').textContent = deposits.length;
+        $('statPendingWithdrawals').textContent = withdrawals.length;
+        $('statPendingResults').textContent = results.length;
+        $('statOpenTickets').textContent = tickets.length;
+
+        // Populate panels
+        populateDepositsPanel(deposits);
+        populateWithdrawalsPanel(withdrawals);
+        populateResultsPanel(results);
+        populateTicketsPanel(tickets);
+
+      } catch (err) {
+        console.error(err);
+        showToast('Failed to load dashboard overview data.', 'error');
+      }
+    }
+
+    function populateDepositsPanel(list) {
+      const panel = $('pendingDepositsPanel');
+      if (list.length === 0) {
+        panel.innerHTML = `<div style="text-align:center; padding:20px; color:var(--text-secondary)">No pending deposits.</div>`;
+        return;
+      }
+      panel.innerHTML = list.slice(0, 5).map(dep => `
+        <div class="action-item-row">
+          <div class="action-item-info">
+            <div class="action-item-title">₹${parseFloat(dep.amount).toFixed(2)} — ${dep.username || 'User'}</div>
+            <div class="action-item-meta">UTR: ${dep.utr_number} • ${new Date(dep.created_at).toLocaleDateString()}</div>
+          </div>
+          <a href="/public/admin/payments.html" class="quick-action-btn btn-primary">Process</a>
+        </div>
+      `).join('');
+    }
+
+    function populateWithdrawalsPanel(list) {
+      const panel = $('pendingWithdrawalsPanel');
+      if (list.length === 0) {
+        panel.innerHTML = `<div style="text-align:center; padding:20px; color:var(--text-secondary)">No pending withdrawals.</div>`;
+        return;
+      }
+      panel.innerHTML = list.slice(0, 5).map(w => `
+        <div class="action-item-row">
+          <div class="action-item-info">
+            <div class="action-item-title">₹${parseFloat(w.amount).toFixed(2)} — UPI: ${w.upi_id}</div>
+            <div class="action-item-meta">Player: ${w.username || 'User'} • Requested: ${new Date(w.created_at).toLocaleDateString()}</div>
+          </div>
+          <a href="/public/admin/withdrawals.html" class="quick-action-btn btn-danger">Process</a>
+        </div>
+      `).join('');
+    }
+
+    function populateResultsPanel(list) {
+      const panel = $('pendingResultsPanel');
+      if (list.length === 0) {
+        panel.innerHTML = `<div style="text-align:center; padding:20px; color:var(--text-secondary)">No pending results to review.</div>`;
+        return;
+      }
+      panel.innerHTML = list.slice(0, 5).map(r => `
+        <div class="action-item-row">
+          <div class="action-item-info">
+            <div class="action-item-title">Tournament #${r.tournament_id} — ${r.username || 'User'}</div>
+            <div class="action-item-meta">Kills: ${r.kills} • Rank: ${r.rank} • Booyah: ${r.got_booyah ? 'Yes' : 'No'}</div>
+          </div>
+          <a href="/public/admin/results.html" class="quick-action-btn btn-primary">Review</a>
+        </div>
+      `).join('');
+    }
+
+    function populateTicketsPanel(list) {
+      const panel = $('openTicketsPanel');
+      if (list.length === 0) {
+        panel.innerHTML = `<div style="text-align:center; padding:20px; color:var(--text-secondary)">No open support tickets.</div>`;
+        return;
+      }
+      panel.innerHTML = list.slice(0, 5).map(t => `
+        <div class="action-item-row">
+          <div class="action-item-info">
+            <div class="action-item-title">[${t.category.toUpperCase()}] ${t.title}</div>
+            <div class="action-item-meta">Player: ${t.username || 'User'} • Opened: ${new Date(t.created_at).toLocaleDateString()}</div>
+          </div>
+          <a href="/public/admin/tickets.html?id=${t.id}" class="quick-action-btn btn-primary">Reply</a>
+        </div>
+      `).join('');
+    }
+  </script>
+</body>
+</html>

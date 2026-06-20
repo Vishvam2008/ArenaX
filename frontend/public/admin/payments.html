@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0a0a0f">
+  <title>Deposits - ArenaX Control Panel</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/assets/css/global.css">
+  <link rel="stylesheet" href="/assets/css/components.css">
+  <link rel="stylesheet" href="/assets/css/admin.css">
+  <style>
+    .screenshot-thumb {
+      width: 48px;
+      height: 48px;
+      border-radius: 8px;
+      border: 1px solid var(--border-glass);
+      cursor: pointer;
+      object-fit: cover;
+      background: rgba(255,255,255,0.02);
+    }
+    .screenshot-thumb:hover {
+      border-color: var(--primary);
+    }
+  </style>
+</head>
+<body>
+
+  <div class="admin-layout">
+    
+    <div class="admin-main">
+      <main class="admin-content">
+
+        <div class="section-title">
+          <span>Manual Deposit Verifications</span>
+        </div>
+
+        <!-- Filter tabs -->
+        <div class="tabs mb-6" style="max-width: 400px;">
+          <button class="tab-btn active" data-status="pending">Pending</button>
+          <button class="tab-btn" data-status="approved">Approved</button>
+          <button class="tab-btn" data-status="rejected">Rejected</button>
+        </div>
+
+        <!-- Payments Table -->
+        <div class="table-container">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>User Details</th>
+                <th>Amount (INR)</th>
+                <th>UTR / Reference</th>
+                <th>Screenshot</th>
+                <th>Submission Date</th>
+                <th style="text-align: right;">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="paymentsTableBody">
+              <tr>
+                <td colspan="6" style="text-align: center; color: var(--text-secondary);">Loading deposit requests...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="pagination" id="paymentsPagination" style="display: none;"></div>
+
+        <!-- 1. IMAGE SCREENSHOT MODAL PREVIEW -->
+        <div class="modal-overlay" id="imageModal">
+          <div class="modal" style="max-width: 500px; margin: 40px auto; border-radius: 16px; text-align: center;">
+            <button class="modal-close" id="closeImageModalBtn">✕</button>
+            <h3 class="modal-title" style="margin-bottom: 16px;">Deposit Receipt Proof</h3>
+            <img id="modalPreviewImg" src="" alt="Full Receipt" style="max-width: 100%; max-height: 70vh; border-radius: 12px; border: 1px solid var(--border-glass);">
+          </div>
+        </div>
+
+        <!-- 2. REJECTION MOTIVE MODAL -->
+        <div class="modal-overlay" id="rejectModal">
+          <div class="modal" style="max-width: 400px; margin: 80px auto; border-radius: 16px;">
+            <div class="modal-handle"></div>
+            <button class="modal-close" id="closeRejectModalBtn">✕</button>
+            <h3 class="modal-title">Reject Deposit Request</h3>
+            
+            <form id="rejectForm">
+              <div class="form-group">
+                <label class="form-label" for="rejectReason">Rejection Reason</label>
+                <textarea id="rejectReason" class="form-control" placeholder="Enter reason (e.g. Invalid UTR, Name mismatch, Fake screenshot)" required minlength="5" style="height: 100px; resize: none;"></textarea>
+              </div>
+              <button type="submit" id="submitRejectBtn" class="btn btn-danger w-full mt-4">❌ Confirm Rejection</button>
+            </form>
+          </div>
+        </div>
+
+      </main>
+    </div>
+
+  </div>
+
+  <div id="toast-container" style="position: fixed; top: 20px; right: 20px; z-index: 9999; pointer-events: none;"></div>
+
+  <script type="module">
+    import { api } from '/assets/js/api.js';
+    import { adminCore } from '/assets/js/admin-core.js';
+
+    const $ = id => document.getElementById(id);
+
+    let page = 1;
+    let currentStatus = 'pending';
+    let selectedPaymentId = null;
+
+    function showToast(message, type = 'info') {
+      const container = $('toast-container');
+      const toast = document.createElement('div');
+      toast.className = `toast ${type}`;
+      toast.textContent = message;
+      toast.style.background = '#1a1a2e';
+      toast.style.border = '1px solid rgba(255,255,255,0.08)';
+      toast.style.borderRadius = '10px';
+      toast.style.padding = '12px 18px';
+      toast.style.color = '#fff';
+      toast.style.marginBottom = '10px';
+      toast.style.pointerEvents = 'all';
+      if (type === 'success') toast.style.borderColor = '#10b981';
+      if (type === 'error') toast.style.borderColor = '#ef4444';
+      
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.remove();
+      }, 3000);
+    }
+
+    // Auth verification
+    const admin = adminCore.requireAdmin();
+    if (admin) {
+      adminCore.initLayout('payments');
+      loadPayments();
+
+      // Bind tabs
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          currentStatus = btn.dataset.status;
+          page = 1;
+          loadPayments();
+        });
+      });
+
+      // Modals setup
+      $('closeImageModalBtn').addEventListener('click', () => $('imageModal').classList.remove('open'));
+      $('closeRejectModalBtn').addEventListener('click', () => $('rejectModal').classList.remove('open'));
+
+      // Reject form submission
+      $('rejectForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const submitBtn = $('submitRejectBtn');
+        submitBtn.disabled = true;
+
+        try {
+          const adminNote = $('rejectReason').value.trim();
+          await api.put(`/admin/payments/${selectedPaymentId}/reject`, { adminNote });
+          showToast('Deposit request rejected.', 'success');
+          
+          $('rejectForm').reset();
+          $('rejectModal').classList.remove('open');
+          await loadPayments();
+        } catch (err) {
+          showToast(err.message || 'Failed to reject deposit.', 'error');
+        } finally {
+          submitBtn.disabled = false;
+        }
+      });
+    }
+
+    async function loadPayments() {
+      try {
+        const res = await api.get('/admin/payments', { page, limit: 10, status: currentStatus });
+        const data = res.data || res;
+        const list = data.requests || [];
+        const pagination = data.pagination || {};
+
+        if (list.length === 0) {
+          $('paymentsTableBody').innerHTML = `
+            <tr>
+              <td colspan="6" style="text-align: center; color: var(--text-secondary); padding: 32px 0;">
+                No deposit requests found in this section.
+              </td>
+            </tr>`;
+          $('paymentsPagination').style.display = 'none';
+          return;
+        }
+
+        let html = '';
+        list.forEach(p => {
+          const dateStr = new Date(p.created_at).toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+          
+          const screenshotHtml = p.screenshot_url
+            ? `<img src="${p.screenshot_url}" class="screenshot-thumb" alt="Proof">`
+            : `<span style="color:var(--text-secondary)">No Proof</span>`;
+
+          let actionsHtml = '';
+          if (currentStatus === 'pending') {
+            actionsHtml = `
+              <button class="btn btn-primary btn-xs approve-btn" data-id="${p.id}" data-amount="${p.amount}">Approve</button>
+              <button class="btn btn-danger btn-xs reject-btn" data-id="${p.id}">Reject</button>
+            `;
+          } else {
+            actionsHtml = `<span style="font-size:12px; color:var(--text-secondary)">Reviewed</span>`;
+          }
+
+          html += `
+            <tr>
+              <td>
+                <div style="font-weight: 700; color: #fff;">${p.username}</div>
+                <div style="font-size: 11px; color: var(--text-secondary); margin-top: 2px;">Email: ${p.email}</div>
+              </td>
+              <td style="font-weight: 700; color: var(--success);">₹${parseFloat(p.amount).toFixed(2)}</td>
+              <td style="font-family: monospace; font-size: 13px;">${p.utr_number}</td>
+              <td>${screenshotHtml}</td>
+              <td>${dateStr}</td>
+              <td style="text-align: right;">
+                <div style="display: inline-flex; gap: 8px;">
+                  ${actionsHtml}
+                </div>
+              </td>
+            </tr>
+          `;
+        });
+        $('paymentsTableBody').innerHTML = html;
+
+        // Bind image previews
+        document.querySelectorAll('.screenshot-thumb').forEach(img => {
+          img.addEventListener('click', () => {
+            $('modalPreviewImg').src = img.src;
+            $('imageModal').classList.add('open');
+          });
+        });
+
+        // Bind approval clicks
+        document.querySelectorAll('.approve-btn').forEach(btn => {
+          btn.addEventListener('click', async () => {
+            const pid = btn.dataset.id;
+            const amt = btn.dataset.amount;
+            if (confirm(`Approve payment of ₹${parseFloat(amt).toFixed(2)}? This will credit the user's wallet immediately.`)) {
+              try {
+                await api.put(`/admin/payments/${pid}/approve`);
+                showToast('Payment approved. Wallet credited.', 'success');
+                await loadPayments();
+              } catch (err) {
+                showToast(err.message || 'Failed to approve payment.', 'error');
+              }
+            }
+          });
+        });
+
+        // Bind rejection clicks
+        document.querySelectorAll('.reject-btn').forEach(btn => {
+          btn.addEventListener('click', () => {
+            selectedPaymentId = btn.dataset.id;
+            $('rejectModal').classList.add('open');
+          });
+        });
+
+        // Pagination
+        if (pagination.pages > 1) {
+          $('paymentsPagination').style.display = 'flex';
+          let pagHtml = '';
+          for (let i = 1; i <= pagination.pages; i++) {
+            pagHtml += `<button class="page-btn ${i === pagination.page ? 'active' : ''}" data-page="${i}">${i}</button>`;
+          }
+          $('paymentsPagination').innerHTML = pagHtml;
+
+          $('paymentsPagination').querySelectorAll('.page-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+              page = parseInt(btn.dataset.page, 10);
+              await loadPayments();
+            });
+          });
+        } else {
+          $('paymentsPagination').style.display = 'none';
+        }
+
+      } catch (err) {
+        console.error(err);
+        showToast('Failed to load deposit requests.', 'error');
+      }
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0a0a0f">
+  <title>Audit Logs - ArenaX Control Panel</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/assets/css/global.css">
+  <link rel="stylesheet" href="/assets/css/components.css">
+  <link rel="stylesheet" href="/assets/css/admin.css">
+</head>
+<body>
+
+  <div class="admin-layout">
+    
+    <div class="admin-main">
+      <main class="admin-content">
+
+        <div class="section-title">
+          <span>Security Audit Trail & Logs</span>
+        </div>
+
+        <div id="superAdminWarning" class="alert alert-danger" style="display: none; margin-bottom: 20px;">
+          ⚠️ Access denied. You must be a Super Administrator to view system audit logs.
+        </div>
+
+        <div id="auditLogContent">
+          <!-- Audit Logs Table -->
+          <div class="table-container">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>Timestamp</th>
+                  <th>Actor Type / ID</th>
+                  <th>Action</th>
+                  <th>Entity Type / ID</th>
+                  <th>IP Address</th>
+                  <th style="text-align: right;">Payload Data</th>
+                </tr>
+              </thead>
+              <tbody id="auditTableBody">
+                <tr>
+                  <td colspan="6" style="text-align: center; color: var(--text-secondary);">Loading audit logs...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="pagination" id="auditPagination" style="display: none;"></div>
+        </div>
+
+        <!-- DETAILS MODAL -->
+        <div class="modal-overlay" id="detailModal">
+          <div class="modal" style="max-width: 500px; margin: 60px auto; border-radius: 16px;">
+            <div class="modal-handle"></div>
+            <button class="modal-close" id="closeDetailModalBtn">✕</button>
+            <h3 class="modal-title">Log Payload Details</h3>
+            <pre id="payloadPre" style="background: var(--bg-primary); border: 1px solid var(--border-glass); border-radius: 10px; padding: 16px; color: #fff; font-family: monospace; font-size: 12.5px; overflow-x: auto; white-space: pre-wrap;"></pre>
+          </div>
+        </div>
+
+      </main>
+    </div>
+
+  </div>
+
+  <div id="toast-container" style="position: fixed; top: 20px; right: 20px; z-index: 9999; pointer-events: none;"></div>
+
+  <script type="module">
+    import { api } from '/assets/js/api.js';
+    import { adminCore } from '/assets/js/admin-core.js';
+
+    const $ = id => document.getElementById(id);
+
+    let page = 1;
+
+    function showToast(message, type = 'info') {
+      const container = $('toast-container');
+      const toast = document.createElement('div');
+      toast.className = `toast ${type}`;
+      toast.textContent = message;
+      toast.style.background = '#1a1a2e';
+      toast.style.border = '1px solid rgba(255,255,255,0.08)';
+      toast.style.borderRadius = '10px';
+      toast.style.padding = '12px 18px';
+      toast.style.color = '#fff';
+      toast.style.marginBottom = '10px';
+      toast.style.pointerEvents = 'all';
+      if (type === 'success') toast.style.borderColor = '#10b981';
+      if (type === 'error') toast.style.borderColor = '#ef4444';
+      
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.remove();
+      }, 3000);
+    }
+
+    // Initialize layout
+    const admin = adminCore.requireAdmin();
+    const isSuper = adminCore.isSuperAdmin();
+
+    if (admin) {
+      adminCore.initLayout('audit-logs');
+
+      if (!isSuper) {
+        $('superAdminWarning').style.display = 'block';
+        $('auditLogContent').style.display = 'none';
+      } else {
+        loadAuditLogs();
+        $('closeDetailModalBtn').addEventListener('click', () => $('detailModal').classList.remove('open'));
+      }
+    }
+
+    async function loadAuditLogs() {
+      try {
+        const res = await api.get('/admin/audit-logs', { page, limit: 15 });
+        const data = res.data || res;
+        const list = data.logs || [];
+        const pagination = data.pagination || {};
+
+        if (list.length === 0) {
+          $('auditTableBody').innerHTML = `
+            <tr>
+              <td colspan="6" style="text-align: center; color: var(--text-secondary); padding: 32px 0;">
+                No audit logs recorded in database.
+              </td>
+            </tr>`;
+          $('auditPagination').style.display = 'none';
+          return;
+        }
+
+        let html = '';
+        list.forEach(l => {
+          const dateStr = new Date(l.created_at).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' });
+          const payloadStr = JSON.stringify(l.payload || {});
+
+          html += `
+            <tr>
+              <td style="font-size: 13px;">${dateStr}</td>
+              <td>
+                <div style="font-weight:700; color:#fff;">${l.actor_type.toUpperCase()}</div>
+                <div style="font-size:11px; color:var(--text-secondary); margin-top:2px;">ID: ${l.actor_id || 'System'}</div>
+              </td>
+              <td style="font-family: monospace; font-size: 13px; color: var(--secondary-light);">${l.action}</td>
+              <td>
+                <div>${l.entity_type || '<span style="color:var(--text-secondary)">None</span>'}</div>
+                <div style="font-size:11px; color:var(--text-secondary); margin-top:2px;">ID: ${l.entity_id || 'N/A'}</div>
+              </td>
+              <td style="font-size: 13px;">${l.ip_address || 'N/A'}</td>
+              <td style="text-align: right;">
+                <button class="btn btn-ghost btn-xs payload-btn" data-payload='${payloadStr.replace(/'/g, "&apos;")}'>View Payload</button>
+              </td>
+            </tr>
+          `;
+        });
+        $('auditTableBody').innerHTML = html;
+
+        // Bind payload modals
+        document.querySelectorAll('.payload-btn').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const rawPayload = btn.dataset.payload;
+            try {
+              const formatted = JSON.stringify(JSON.parse(rawPayload), null, 2);
+              $('payloadPre').textContent = formatted;
+            } catch (_) {
+              $('payloadPre').textContent = rawPayload;
+            }
+            $('detailModal').classList.add('open');
+          });
+        });
+
+        // Pagination
+        if (pagination.pages > 1) {
+          $('auditPagination').style.display = 'flex';
+          let pagHtml = '';
+          for (let i = 1; i <= pagination.pages; i++) {
+            pagHtml += `<button class="page-btn ${i === pagination.page ? 'active' : ''}" data-page="${i}">${i}</button>`;
+          }
+          $('auditPagination').innerHTML = pagHtml;
+
+          $('auditPagination').querySelectorAll('.page-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+              page = parseInt(btn.dataset.page, 10);
+              await loadAuditLogs();
+            });
+          });
+        } else {
+          $('auditPagination').style.display = 'none';
+        }
+
+      } catch (err) {
+        console.error(err);
+        showToast('Failed to load system audit logs.', 'error');
+      }
+    }
+  </script>
+</body>
+</html>

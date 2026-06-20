@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard - ArenaX</title>
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#7c3aed">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/assets/css/global.css">
+  <link rel="stylesheet" href="/assets/css/components.css">
+  <style>
+    body {
+      padding-top: 60px;
+      padding-bottom: 70px;
+      background-color: var(--bg-primary);
+      min-height: 100vh;
+    }
+
+    .main-container {
+      max-width: 540px;
+      margin: 0 auto;
+      padding: 16px;
+    }
+
+    /* Welcome Card with Premium Esports Border Glow */
+    .welcome-card {
+      background: linear-gradient(135deg, rgba(124,58,237,0.12) 0%, rgba(6,182,212,0.06) 100%);
+      border: 1px solid rgba(124,58,237,0.2);
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .user-avatar-large {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-display);
+      font-size: 22px;
+      font-weight: 700;
+      color: white;
+      border: 2px solid rgba(255,255,255,0.15);
+      flex-shrink: 0;
+    }
+
+    .welcome-text h2 {
+      font-family: var(--font-display);
+      font-size: 20px;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .welcome-text p {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-top: 2px;
+    }
+
+    /* Wallet Card */
+    .wallet-card {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-glass);
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 20px;
+      position: relative;
+    }
+
+    .wallet-header {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .wallet-balance {
+      font-family: var(--font-display);
+      font-size: 32px;
+      font-weight: 800;
+      color: #fff;
+      margin: 8px 0 16px;
+    }
+
+    .wallet-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    /* Section Headers */
+    .section-title {
+      font-family: var(--font-display);
+      font-size: 16px;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .section-title a {
+      font-size: 12px;
+      color: var(--primary-light);
+      font-weight: 600;
+    }
+
+    .tournaments-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 30px 16px;
+      background: var(--bg-card);
+      border: 1px dashed var(--border-glass);
+      border-radius: 12px;
+      font-size: 13.5px;
+      color: var(--text-secondary);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top App Navbar -->
+  <nav class="navbar">
+    <a href="/public/dashboard/" class="navbar-logo">ArenaX</a>
+    <div class="navbar-spacer"></div>
+    <div class="navbar-actions">
+      <!-- In-app Notification Bell -->
+      <button class="notification-bell" id="bellBtn" aria-label="Notifications" aria-haspopup="true">
+        🔔
+        <span class="badge badge-danger" id="bellBadge" style="display:none; position:absolute; top:-2px; right:-2px; padding:0.1rem 0.35rem; font-size:9px;">0</span>
+      </button>
+      <!-- Dropdown Panel -->
+      <div class="notif-dropdown" id="notifDropdown" style="position:fixed; top:54px; right:12px; width:320px; background:var(--bg-secondary); border:1px solid var(--border-glass); border-radius:12px; display:none; flex-direction:column; overflow:hidden; box-shadow:var(--shadow-lg); z-index:var(--z-dropdown);">
+        <!-- Populated dynamically by notifications.js -->
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main Container -->
+  <main class="main-container">
+
+    <!-- Welcome User Banner -->
+    <div class="welcome-card">
+      <div class="user-avatar-large" id="userAvatar">U</div>
+      <div class="welcome-text">
+        <h2 id="welcomeUser">Hello, Champ</h2>
+        <p id="welcomeUid">UID: Loading...</p>
+      </div>
+    </div>
+
+    <!-- Wallet Summary Box -->
+    <div class="wallet-card">
+      <div class="wallet-header">Total Wallet Balance</div>
+      <div class="wallet-balance" id="walletBalance">₹0.00</div>
+      <div class="wallet-actions">
+        <a href="/public/wallet/index.html?tab=deposit" class="btn btn-primary btn-sm">💸 Deposit</a>
+        <a href="/public/wallet/index.html?tab=withdraw" class="btn btn-ghost btn-sm">🏦 Withdraw</a>
+      </div>
+    </div>
+
+    <!-- Active Joined Matches Section -->
+    <div class="section-title">
+      <span>My Registered Matches</span>
+    </div>
+    <div class="tournaments-list mb-6" id="joinedMatchesList">
+      <div class="skeleton-card" style="height:100px;"></div>
+    </div>
+
+    <!-- Upcoming Matches -->
+    <div class="section-title">
+      <span>Featured Tournaments</span>
+      <a href="/public/tournaments/">View All</a>
+    </div>
+    <div class="tournaments-list" id="featuredList">
+      <div class="skeleton-card" style="height:180px;"></div>
+    </div>
+
+  </main>
+
+  <!-- Bottom Navigation Bar (Mobile First) -->
+  <nav class="bottom-nav">
+    <a href="/public/dashboard/" class="bottom-nav-item active">
+      <span class="nav-icon">🏠</span>
+      <span class="nav-label">Home</span>
+    </a>
+    <a href="/public/tournaments/" class="bottom-nav-item">
+      <span class="nav-icon">🏆</span>
+      <span class="nav-label">Matches</span>
+    </a>
+    <a href="/public/wallet/" class="bottom-nav-item">
+      <span class="nav-icon">💳</span>
+      <span class="nav-label">Wallet</span>
+    </a>
+    <a href="/public/profile/" class="bottom-nav-item">
+      <span class="nav-icon">👤</span>
+      <span class="nav-label">Profile</span>
+    </a>
+  </nav>
+
+  <script type="module">
+    import { api } from '/assets/js/api.js';
+    import { auth } from '/assets/js/auth.js';
+    import { NotificationManager } from '/assets/js/notifications.js';
+
+    const $ = id => document.getElementById(id);
+
+    // Guard route
+    const user = auth.requireAuth();
+    if (!user) {
+      // Redirect handled by auth.js requireAuth
+    }
+
+    // Initialize notification bell dropdown
+    const notifMgr = new NotificationManager($('bellBtn'), $('bellBadge'), $('notifDropdown'));
+    notifMgr.init();
+
+    // Load Dashboard Data
+    async function loadDashboard() {
+      try {
+        // Fetch Profile & Wallet
+        const profile = await api.get('/users/profile');
+        const username = profile.data?.username || profile.username;
+        const ffUid = profile.data?.ff_uid || profile.ff_uid;
+        const balance = profile.data?.wallet_balance || profile.wallet_balance || '0.00';
+        const avatarUrl = profile.data?.avatar_url || profile.avatar_url;
+
+        $('welcomeUser').textContent = `Hello, ${username} 👋`;
+        $('welcomeUid').textContent = `UID: ${ffUid}`;
+        $('walletBalance').textContent = `₹${parseFloat(balance).toFixed(2)}`;
+
+        // Set avatar letter
+        if (avatarUrl) {
+          $('userAvatar').style.backgroundImage = `url(${avatarUrl})`;
+          $('userAvatar').style.backgroundSize = 'cover';
+          $('userAvatar').style.backgroundPosition = 'center';
+          $('userAvatar').textContent = '';
+        } else {
+          $('userAvatar').textContent = username.charAt(0).toUpperCase();
+        }
+
+        // Fetch Joined tournaments
+        const tJoined = await api.get('/tournaments', { status: 'registration_open' }); // we can filter in JS
+        const tournaments = tJoined.data?.tournaments || tJoined.tournaments || [];
+
+        // Fetch user's registered matches
+        const registered = [];
+        const featured = [];
+
+        // Check registration for each tournament in parallel
+        await Promise.all(tournaments.map(async (t) => {
+          try {
+            const detail = await api.get(`/tournaments/${t.id}`);
+            const isReg = detail.data?.isRegistered || detail.isRegistered;
+            if (isReg) {
+              registered.push(t);
+            } else {
+              featured.push(t);
+            }
+          } catch (_) {}
+        }));
+
+        // Render joined
+        if (registered.length === 0) {
+          $('joinedMatchesList').innerHTML = `
+            <div class="empty-state">
+              You haven't registered for any matches yet. Browse matches to join!
+            </div>`;
+        } else {
+          $('joinedMatchesList').innerHTML = registered.slice(0, 3).map(t => renderJoinedCard(t)).join('');
+        }
+
+        // Render featured (limit 3)
+        if (featured.length === 0) {
+          $('featuredList').innerHTML = `
+            <div class="empty-state">
+              No upcoming tournaments available at the moment.
+            </div>`;
+        } else {
+          $('featuredList').innerHTML = featured.slice(0, 3).map(t => renderFeaturedCard(t)).join('');
+        }
+
+      } catch (err) {
+        console.error('Failed to load dashboard data:', err);
+      }
+    }
+
+    function renderJoinedCard(t) {
+      const matchTime = new Date(t.match_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      const matchDate = new Date(t.match_time).toLocaleDateString([], { month: 'short', day: 'numeric' });
+      return `
+        <a href="/public/tournaments/detail.html?id=${t.id}" class="card-transaction" style="border-left: 3px solid var(--success);">
+          <div class="transaction-icon credit">🎮</div>
+          <div class="transaction-info">
+            <div class="transaction-title">${t.title}</div>
+            <div class="transaction-date">${matchDate} at ${matchTime}</div>
+          </div>
+          <div class="badge badge-success" style="font-size:10px;">${t.status.replace('_', ' ')}</div>
+        </a>`;
+    }
+
+    function renderFeaturedCard(t) {
+      const entryFeeText = parseFloat(t.entry_fee) === 0 ? 'FREE' : `₹${parseFloat(t.entry_fee).toFixed(0)}`;
+      const timeStr = new Date(t.match_time).toLocaleDateString([], { month: 'short', day: 'numeric' }) + ' ' +
+                      new Date(t.match_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+      return `
+        <div class="card-tournament">
+          <div class="tournament-banner-wrapper">
+            <img src="${t.banner_url || '/assets/css/FF_banner.jpg'}" onerror="this.src='https://images.unsplash.com/photo-1542751371-adc38448a05e?w=500'" alt="Banner">
+            <div class="tournament-game-badge">${t.game.replace('_', ' ')}</div>
+          </div>
+          <div class="tournament-card-body">
+            <a href="/public/tournaments/detail.html?id=${t.id}"><h3 class="tournament-title">${t.title}</h3></a>
+            <div class="tournament-stats-grid">
+              <div class="tournament-stat">
+                <span class="stat-label">Entry Fee</span>
+                <span class="stat-value text-cyan">${entryFeeText}</span>
+              </div>
+              <div class="tournament-stat">
+                <span class="stat-label">Prize Pool</span>
+                <span class="stat-value text-accent">₹${parseFloat(t.prize_pool).toFixed(0)}</span>
+              </div>
+              <div class="tournament-stat">
+                <span class="stat-label">Per Kill</span>
+                <span class="stat-value text-success">₹${parseFloat(t.per_kill_reward).toFixed(0)}</span>
+              </div>
+              <div class="tournament-stat">
+                <span class="stat-label">Match Format</span>
+                <span class="stat-value">${t.match_type.toUpperCase()}</span>
+              </div>
+            </div>
+            <div class="tournament-footer">
+              <span class="badge badge-purple">${t.status.replace('_', ' ')}</span>
+              <span style="font-size:11px; color:var(--text-secondary);">⏰ ${timeStr}</span>
+            </div>
+          </div>
+        </div>`;
+    }
+
+    loadDashboard();
+  </script>
+</body>
+</html>

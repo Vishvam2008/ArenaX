@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0a0a0f">
+  <title>Settings - ArenaX Control Panel</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/assets/css/global.css">
+  <link rel="stylesheet" href="/assets/css/components.css">
+  <link rel="stylesheet" href="/assets/css/admin.css">
+  <style>
+    .settings-container {
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+      max-width: 700px;
+    }
+    .settings-card {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-glass);
+      border-radius: 16px;
+      padding: 24px;
+    }
+    .settings-card-title {
+      font-family: var(--font-display);
+      font-size: 16px;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 16px;
+      border-bottom: 1px solid var(--border-glass);
+      padding-bottom: 10px;
+    }
+    .qr-preview {
+      width: 140px;
+      height: 140px;
+      border: 1px solid var(--border-glass);
+      border-radius: 12px;
+      margin-top: 12px;
+      background: rgba(255,255,255,0.02);
+      display: grid;
+      place-items: center;
+      object-fit: contain;
+    }
+    .row-align {
+      display: flex;
+      gap: 12px;
+      align-items: flex-end;
+    }
+    .flex-1 { flex: 1; }
+  </style>
+</head>
+<body>
+
+  <div class="admin-layout">
+    
+    <div class="admin-main">
+      <main class="admin-content">
+
+        <div class="section-title">
+          <span>Global Settings & Merchant Configuration</span>
+        </div>
+
+        <div id="superAdminWarning" class="alert alert-danger" style="display: none; margin-bottom: 20px;">
+          ⚠️ You are logged in with a staff account. Only Super Administrators can modify these parameters.
+        </div>
+
+        <div class="settings-container">
+          
+          <!-- 1. MERCHANT UPI SETTINGS -->
+          <div class="settings-card">
+            <h3 class="settings-card-title">💸 UPI Merchant Payment gateway</h3>
+            
+            <div class="form-group">
+              <label class="form-label" for="upiId">Static Merchant UPI ID</label>
+              <div class="row-align">
+                <input type="text" id="upiId" class="form-control flex-1" placeholder="arenax@upi" required>
+                <button class="btn btn-primary update-btn" data-key="upi_id" id="btnUpiId">Save</button>
+              </div>
+              <span style="font-size:11px; color:var(--text-secondary); margin-top:4px; display:block;">
+                Displayed to players during manual deposits.
+              </span>
+            </div>
+
+            <div class="form-group" style="margin-top: 20px;">
+              <label class="form-label">Static QR Code Receipt Proof</label>
+              <form id="qrCodeForm" enctype="multipart/form-data" class="row-align">
+                <input type="file" id="qrFile" accept="image/*" class="form-control flex-1" style="padding: 8px 12px;" required>
+                <button type="submit" id="btnQrCode" class="btn btn-primary">Upload</button>
+              </form>
+              <img id="qrPreviewImg" class="qr-preview" style="display: none;" alt="QR Code Preview">
+              <div id="noQrText" style="margin-top: 12px; font-size: 13px; color: var(--text-secondary);">No QR image uploaded yet.</div>
+            </div>
+          </div>
+
+          <!-- 2. WALLET LIMITS -->
+          <div class="settings-card">
+            <h3 class="settings-card-title">💳 Player Wallet Parameters</h3>
+            
+            <div class="form-group">
+              <label class="form-label" for="minDeposit">Minimum Deposit Amount (INR)</label>
+              <div class="row-align">
+                <input type="number" id="minDeposit" class="form-control flex-1" placeholder="10" required min="1">
+                <button class="btn btn-primary update-btn" data-key="min_deposit" id="btnMinDep">Save</button>
+              </div>
+            </div>
+
+            <div class="form-group" style="margin-top: 16px;">
+              <label class="form-label" for="maxDeposit">Maximum Deposit Amount (INR)</label>
+              <div class="row-align">
+                <input type="number" id="maxDeposit" class="form-control flex-1" placeholder="10000" required min="1">
+                <button class="btn btn-primary update-btn" data-key="max_deposit" id="btnMaxDep">Save</button>
+              </div>
+            </div>
+
+            <div class="form-group" style="margin-top: 16px;">
+              <label class="form-label" for="minWithdrawal">Minimum Withdrawal Amount (INR)</label>
+              <div class="row-align">
+                <input type="number" id="minWithdrawal" class="form-control flex-1" placeholder="50" required min="1">
+                <button class="btn btn-primary update-btn" data-key="min_withdrawal" id="btnMinWith">Save</button>
+              </div>
+            </div>
+
+            <div class="form-group" style="margin-top: 16px;">
+              <label class="form-label" for="maxWithdrawal">Maximum Withdrawal Amount (INR)</label>
+              <div class="row-align">
+                <input type="number" id="maxWithdrawal" class="form-control flex-1" placeholder="5000" required min="1">
+                <button class="btn btn-primary update-btn" data-key="max_withdrawal" id="btnMaxWith">Save</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- 3. PLATFORM SYSTEM PARAMS -->
+          <div class="settings-card">
+            <h3 class="settings-card-title">⚙️ System Configurations</h3>
+            
+            <div class="form-group">
+              <label class="form-label" for="platformName">Platform Display Name</label>
+              <div class="row-align">
+                <input type="text" id="platformName" class="form-control flex-1" placeholder="ArenaX" required>
+                <button class="btn btn-primary update-btn" data-key="platform_name" id="btnPlatformName">Save</button>
+              </div>
+            </div>
+
+            <div class="form-group" style="margin-top: 16px;">
+              <label class="form-label" for="maintenanceMode">System Maintenance Status</label>
+              <div class="row-align">
+                <select id="maintenanceMode" class="form-control flex-1" style="background: var(--bg-primary);">
+                  <option value="false">Live (Online)</option>
+                  <option value="true">Maintenance Mode (Offline)</option>
+                </select>
+                <button class="btn btn-primary update-btn" data-key="maintenance_mode" id="btnMaintenance">Save</button>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+      </main>
+    </div>
+
+  </div>
+
+  <div id="toast-container" style="position: fixed; top: 20px; right: 20px; z-index: 9999; pointer-events: none;"></div>
+
+  <script type="module">
+    import { api } from '/assets/js/api.js';
+    import { adminCore } from '/assets/js/admin-core.js';
+
+    const $ = id => document.getElementById(id);
+
+    function showToast(message, type = 'info') {
+      const container = $('toast-container');
+      const toast = document.createElement('div');
+      toast.className = `toast ${type}`;
+      toast.textContent = message;
+      toast.style.background = '#1a1a2e';
+      toast.style.border = '1px solid rgba(255,255,255,0.08)';
+      toast.style.borderRadius = '10px';
+      toast.style.padding = '12px 18px';
+      toast.style.color = '#fff';
+      toast.style.marginBottom = '10px';
+      toast.style.pointerEvents = 'all';
+      if (type === 'success') toast.style.borderColor = '#10b981';
+      if (type === 'error') toast.style.borderColor = '#ef4444';
+      
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.remove();
+      }, 3000);
+    }
+
+    // Initialize layout
+    const admin = adminCore.requireAdmin();
+    const isSuper = adminCore.isSuperAdmin();
+
+    if (admin) {
+      adminCore.initLayout('settings');
+      loadSettings();
+
+      // Guard forms accessibility
+      if (!isSuper) {
+        $('superAdminWarning').style.display = 'block';
+        
+        // Disable all inputs & buttons
+        document.querySelectorAll('input, select, textarea').forEach(el => el.disabled = true);
+        document.querySelectorAll('.update-btn, button[type="submit"]').forEach(el => el.disabled = true);
+      } else {
+        // Bind updates button clicks
+        document.querySelectorAll('.update-btn').forEach(btn => {
+          btn.addEventListener('click', async () => {
+            const key = btn.dataset.key;
+            let valInputId = '';
+            
+            if (key === 'upi_id') valInputId = 'upiId';
+            else if (key === 'min_deposit') valInputId = 'minDeposit';
+            else if (key === 'max_deposit') valInputId = 'maxDeposit';
+            else if (key === 'min_withdrawal') valInputId = 'minWithdrawal';
+            else if (key === 'max_withdrawal') valInputId = 'maxWithdrawal';
+            else if (key === 'platform_name') valInputId = 'platformName';
+            else if (key === 'maintenance_mode') valInputId = 'maintenanceMode';
+
+            const value = $(valInputId).value.trim();
+            if (!value) return;
+
+            btn.disabled = true;
+            try {
+              await api.put(`/admin/settings/${key}`, { value });
+              showToast(`Setting '${key}' updated successfully.`, 'success');
+            } catch (err) {
+              showToast(err.message || 'Failed to update setting.', 'error');
+            } finally {
+              btn.disabled = false;
+            }
+          });
+        });
+
+        // Bind QR Code upload form submission
+        $('qrCodeForm').addEventListener('submit', async (e) => {
+          e.preventDefault();
+          const btn = $('btnQrCode');
+          btn.disabled = true;
+          btn.textContent = 'Uploading...';
+
+          try {
+            const fileInput = $('qrFile');
+            const file = fileInput.files[0];
+            if (!file) return;
+
+            const formData = new FormData();
+            formData.append('qr_code', file);
+
+            const res = await api.upload('/admin/settings/qr/upload', formData);
+            const data = res.data || res;
+            
+            showToast('Static QR Code Image uploaded successfully.', 'success');
+            updateQrPreview(data.value);
+            
+            $('qrCodeForm').reset();
+          } catch (err) {
+            console.error(err);
+            showToast(err.message || 'Failed to upload QR Code image.', 'error');
+          } finally {
+            btn.disabled = false;
+            btn.textContent = 'Upload';
+          }
+        });
+      }
+    }
+
+    async function loadSettings() {
+      try {
+        const res = await api.get('/admin/settings');
+        const settings = res.data || res;
+
+        settings.forEach(s => {
+          if (s.key === 'upi_id') $('upiId').value = s.value;
+          else if (s.key === 'qr_image_url') updateQrPreview(s.value);
+          else if (s.key === 'min_deposit') $('minDeposit').value = s.value;
+          else if (s.key === 'max_deposit') $('maxDeposit').value = s.value;
+          else if (s.key === 'min_withdrawal') $('minWithdrawal').value = s.value;
+          else if (s.key === 'max_withdrawal') $('maxWithdrawal').value = s.value;
+          else if (s.key === 'platform_name') $('platformName').value = s.value;
+          else if (s.key === 'maintenance_mode') $('maintenanceMode').value = s.value;
+        });
+
+      } catch (err) {
+        console.error(err);
+        showToast('Failed to fetch settings from database.', 'error');
+      }
+    }
+
+    function updateQrPreview(url) {
+      const img = $('qrPreviewImg');
+      const text = $('noQrText');
+      
+      if (url) {
+        img.src = url;
+        img.style.display = 'block';
+        text.style.display = 'none';
+      } else {
+        img.style.display = 'none';
+        text.style.display = 'block';
+      }
+    }
+  </script>
+</body>
+</html>
