@@ -11,10 +11,15 @@ const submitPaymentRules = [
     .trim()
     .isFloat({ min: 1 }).withMessage('Deposit amount must be a positive number greater than or equal to 1.'),
 
-  body('utrNumber')
-    .trim()
-    .isLength({ min: 12, max: 20 }).withMessage('UTR number must be between 12 and 20 characters long.')
-    .matches(/^[A-Za-z0-9]+$/).withMessage('UTR number must be alphanumeric (letters and numbers only).'),
+  body()
+    .custom((value, { req }) => {
+      const utrNumber = req.body.utrNumber || req.body.utr_number;
+      if (!utrNumber || !/^[A-Za-z0-9]{12,20}$/.test(String(utrNumber).trim())) {
+        throw new Error('UTR number must be 12 to 20 alphanumeric characters.');
+      }
+      req.body.utrNumber = String(utrNumber).trim();
+      return true;
+    }),
 ];
 
 module.exports = {

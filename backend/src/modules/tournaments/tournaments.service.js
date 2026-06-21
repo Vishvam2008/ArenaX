@@ -198,7 +198,11 @@ async function joinTournament(tournamentId, userId) {
 
     // 7. Auto-allocate slots and insert participants
     const participantsList = [];
-    for (const pId of participantIds) {
+    let captainSlotNumber = null;
+
+    for (let idx = 0; idx < participantIds.length; idx++) {
+      const pId = participantIds[idx];
+
       // Find the next available slot number
       const slotRes = await client.query(
         'SELECT COALESCE(MAX(slot_number), 0) + 1 AS next_slot FROM participants WHERE tournament_id = $1',
@@ -212,7 +216,11 @@ async function joinTournament(tournamentId, userId) {
          RETURNING *`,
         [tournamentId, pId, teamId, slotNumber]
       );
+
       participantsList.push(pInsert.rows[0]);
+      if (idx === 0) {
+        captainSlotNumber = slotNumber;
+      }
     }
 
     // 8. Update filled slots count on tournament
@@ -235,7 +243,10 @@ async function joinTournament(tournamentId, userId) {
       });
     }
 
-    return participantsList;
+    return {
+      participants: participantsList,
+      captainSlotNumber,
+    };
   } catch (err) {
     await client.query('ROLLBACK');
     throw err;

@@ -688,7 +688,7 @@
 
         if (api) {
           // Use API module
-          data = await api.post('/api/auth/login', { email, password });
+          data = await api.post('/auth/login', { email, password });
         } else {
           // Inline fallback fetch
           const res = await fetch('/api/auth/login', {
@@ -703,7 +703,7 @@
         }
 
         // Persist auth
-        const token = data.token || data.data?.token;
+        const token = data.accessToken || data.token || data.data?.accessToken || data.data?.token;
         const user  = data.user  || data.data?.user;
 
         if (token) {

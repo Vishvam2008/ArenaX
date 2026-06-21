@@ -30,7 +30,8 @@ async function getTournament(req, res, next) {
 
 async function joinTournament(req, res, next) {
   try {
-    const participants = await tournamentsService.joinTournament(req.params.id, req.user.id);
+    const joinResult = await tournamentsService.joinTournament(req.params.id, req.user.id);
+    const participants = joinResult.participants;
 
     await logAudit({
       actorType: 'user',
@@ -42,7 +43,7 @@ async function joinTournament(req, res, next) {
       req,
     });
 
-    return response.success(res, participants, 'Successfully registered for the tournament.', 201);
+    return response.success(res, joinResult, 'Successfully registered for the tournament.', 201);
   } catch (err) {
     next(err);
   }

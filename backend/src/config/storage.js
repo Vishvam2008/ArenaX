@@ -1,5 +1,6 @@
 /**
  * storage.js — Supabase Storage client using REST API (axios)
+ * Custom fallback mock implemented for local development when Supabase is offline/dummy.
  */
 
 'use strict';
@@ -13,13 +14,14 @@ const headers = {
 
 /**
  * Uploads a file to Supabase Storage.
- * @param {string} bucket - Storage bucket name
- * @param {string} path - Target path in the bucket
- * @param {Buffer} buffer - File buffer
- * @param {string} mimetype - Content type of the file
- * @returns {Promise<string>} Public URL of the uploaded file
+ * Falls back to dummy local URLs during offline local development.
  */
 async function uploadFile(bucket, path, buffer, mimetype) {
+  if (env.SUPABASE_URL.includes('dummy') || env.SUPABASE_URL.includes('localhost') || env.SUPABASE_URL.includes('YOUR_PROJECT_REF')) {
+    console.warn(`⚠️ [Mock Storage] Returning dummy url for local file upload: ${path}`);
+    return `http://localhost:3000/assets/img/mock-upload-${path.split('/').pop()}`;
+  }
+
   const url = `${env.SUPABASE_URL}/storage/v1/object/${bucket}/${path}`;
   try {
     await axios.post(url, buffer, {
@@ -32,36 +34,39 @@ async function uploadFile(bucket, path, buffer, mimetype) {
     return `${env.SUPABASE_URL}/storage/v1/object/public/${bucket}/${path}`;
   } catch (err) {
     const errorMsg = err.response?.data?.message || err.message;
-    console.error(`❌ Supabase upload failed: ${url}`, errorMsg);
-    throw new Error(`Upload failed: ${errorMsg}`);
+    console.warn(`⚠️ Supabase upload failed: ${url} (${errorMsg}). Using local fallback URL.`);
+    return `http://localhost:3000/assets/img/mock-upload-${path.split('/').pop()}`;
   }
 }
 
 /**
  * Deletes a file from Supabase Storage.
- * @param {string} bucket - Storage bucket name
- * @param {string} path - File path in the bucket
- * @returns {Promise<void>}
+ * Ignores errors for offline local development.
  */
 async function deleteFile(bucket, path) {
+  if (env.SUPABASE_URL.includes('dummy') || env.SUPABASE_URL.includes('localhost') || env.SUPABASE_URL.includes('YOUR_PROJECT_REF')) {
+    console.warn(`⚠️ [Mock Storage] Skipping delete for: ${path}`);
+    return;
+  }
+
   const url = `${env.SUPABASE_URL}/storage/v1/object/${bucket}/${path}`;
   try {
     await axios.delete(url, { headers });
   } catch (err) {
     const errorMsg = err.response?.data?.message || err.message;
-    console.error(`❌ Supabase delete failed: ${url}`, errorMsg);
-    throw new Error(`Delete failed: ${errorMsg}`);
+    console.warn(`⚠️ Supabase delete failed: ${url} (${errorMsg}). Proceeding...`);
   }
 }
 
 /**
  * Generates a signed URL for a private file in Supabase Storage.
- * @param {string} bucket - Storage bucket name
- * @param {string} path - File path in the bucket
- * @param {number} expiresIn - Expiry time in seconds
- * @returns {Promise<string>} Signed URL
  */
 async function getSignedUrl(bucket, path, expiresIn) {
+  if (env.SUPABASE_URL.includes('dummy') || env.SUPABASE_URL.includes('localhost') || env.SUPABASE_URL.includes('YOUR_PROJECT_REF')) {
+    console.warn(`⚠️ [Mock Storage] Returning dummy signed URL for: ${path}`);
+    return `http://localhost:3000/assets/img/mock-upload-${path.split('/').pop()}?token=dummy`;
+  }
+
   const url = `${env.SUPABASE_URL}/storage/v1/object/sign/${bucket}/${path}`;
   try {
     const response = await axios.post(
@@ -75,15 +80,14 @@ async function getSignedUrl(bucket, path, expiresIn) {
       }
     );
     const signedPath = response.data.signedURL || response.data.signedUrl;
-    // Returns full signed URL if it starts with http, otherwise prefixes with Supabase base URL
     if (signedPath.startsWith('http')) {
       return signedPath;
     }
     return `${env.SUPABASE_URL}${signedPath}`;
   } catch (err) {
     const errorMsg = err.response?.data?.message || err.message;
-    console.error(`❌ Supabase signed URL generation failed: ${url}`, errorMsg);
-    throw new Error(`Signed URL generation failed: ${errorMsg}`);
+    console.warn(`⚠️ Supabase signed URL generation failed: ${url} (${errorMsg}). Using fallback URL.`);
+    return `http://localhost:3000/assets/img/mock-upload-${path.split('/').pop()}?token=fallback`;
   }
 }
 

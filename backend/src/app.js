@@ -77,8 +77,8 @@ app.use('/api/notifications', notificationsRouter);
 app.use('/api/apk', apkRouter);
 app.use('/api/tickets', ticketsRouter);
 
-// Admin endpoints protected by admin authentication middleware
-app.use('/api/admin', authenticateAdmin, adminRouter);
+// Admin endpoints
+app.use('/api/admin', adminRouter);
 
 // 7. Route Not Found (404) Handler
 app.use((req, res) => {

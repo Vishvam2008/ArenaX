@@ -19,7 +19,8 @@ async function getDepositInfo(req, res, next) {
 
 async function submitPayment(req, res, next) {
   try {
-    const { amount, utrNumber } = req.body;
+    const { amount } = req.body;
+    const utrNumber = req.body.utrNumber || req.body.utr_number;
     const request = await paymentsService.submitPayment(req.user.id, {
       amount,
       utrNumber,

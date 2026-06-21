@@ -473,7 +473,7 @@
       formData.append('kill_screenshot', fileKills);
 
       try {
-        await api.upload(`/${tournamentId}/result`, formData); // Upload endpoint is mounted under /api/tournaments/:id/result
+        await api.upload(`/tournaments/${tournamentId}/result`, formData); // Upload endpoint is mounted under /api/tournaments/:id/result
         // Wait, check api client mount in app.js:
         // app.use('/api/tournaments', tournamentsRouter);
         // And inside tournamentsRouter: router.post('/:id/result', ...);
@@ -497,7 +497,10 @@
       }
     });
 
-    loadDetails();
+    (async () => {
+      await auth.init();
+      loadDetails();
+    })();
   </script>
 </body>
 </html>

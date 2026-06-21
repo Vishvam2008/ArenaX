@@ -158,10 +158,17 @@
 
     const $ = id => document.getElementById(id);
 
-    auth.requireAuth();
+    // Guard route and initialize
+    (async () => {
+      await auth.init();
+      const user = auth.requireAuth();
+      if (!user) return;
 
-    const notifMgr = new NotificationManager($('bellBtn'), $('bellBadge'), $('notifDropdown'));
-    notifMgr.init();
+      const notifMgr = new NotificationManager($('bellBtn'), $('bellBadge'), $('notifDropdown'));
+      notifMgr.init();
+
+      await loadTournaments();
+    })();
 
     // Filters state
     const filters = {
@@ -279,7 +286,6 @@
       renderTournaments();
     });
 
-    loadTournaments();
   </script>
 </body>
 </html>

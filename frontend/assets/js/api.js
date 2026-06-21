@@ -149,7 +149,8 @@ class ApiClient {
         _isRetry: true, // prevent infinite 401 loop
       });
 
-      const newToken = data && (data.accessToken || data.token);
+      const payload = data?.data || data;
+      const newToken = payload && (payload.accessToken || payload.token);
       if (!newToken) throw new Error('No token in refresh response');
 
       // Update module-level store

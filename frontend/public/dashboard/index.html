@@ -219,15 +219,19 @@
 
     const $ = id => document.getElementById(id);
 
-    // Guard route
-    const user = auth.requireAuth();
-    if (!user) {
-      // Redirect handled by auth.js requireAuth
-    }
+    // Guard route and initialize
+    (async () => {
+      await auth.init();
+      const user = auth.requireAuth();
+      if (!user) return;
 
-    // Initialize notification bell dropdown
-    const notifMgr = new NotificationManager($('bellBtn'), $('bellBadge'), $('notifDropdown'));
-    notifMgr.init();
+      // Initialize notification bell dropdown
+      const notifMgr = new NotificationManager($('bellBtn'), $('bellBadge'), $('notifDropdown'));
+      notifMgr.init();
+
+      // Load Dashboard Data
+      await loadDashboard();
+    })();
 
     // Load Dashboard Data
     async function loadDashboard() {
@@ -352,7 +356,6 @@
         </div>`;
     }
 
-    loadDashboard();
   </script>
 </body>
 </html>

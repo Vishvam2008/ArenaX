@@ -125,10 +125,11 @@ export const auth = {
     // 2. Attempt a silent token refresh using the httpOnly refresh cookie
     try {
       const data = await api.post('/auth/refresh', null);
-      const newToken = data && (data.accessToken || data.token);
+      const payload = data?.data || data;
+      const newToken = payload && (payload.accessToken || payload.token);
       if (!newToken) throw new Error('No token returned');
 
-      const freshUser = (data && data.user) || storedUser;
+      const freshUser = (payload && payload.user) || storedUser;
       if (!freshUser) throw new Error('No user data');
 
       // 3. Restore session

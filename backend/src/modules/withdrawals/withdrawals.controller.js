@@ -10,7 +10,8 @@ const { logAudit } = require('../../utils/auditLogger');
 
 async function requestWithdrawal(req, res, next) {
   try {
-    const { upiId, amount } = req.body;
+    const { amount } = req.body;
+    const upiId = req.body.upiId || req.body.upi_id;
     const request = await withdrawalsService.requestWithdrawal(req.user.id, {
       upiId,
       amount,
