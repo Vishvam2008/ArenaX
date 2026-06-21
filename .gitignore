@@ -42,3 +42,9 @@ lerna-debug.log*
 # System Files
 .DS_Store
 Thumbs.db
+
+# Local temporary artifacts
+tmp_*.json
+tmp_*.jpg
+.tmp*
+.agents/

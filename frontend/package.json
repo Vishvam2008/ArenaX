@@ -1,0 +1,10 @@
+{
+  "name": "arenax-frontend",
+  "version": "1.0.0",
+  "description": "ArenaX Esports Platform Frontend",
+  "scripts": {
+    "start": "npx -y http-server -p 3000"
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}
