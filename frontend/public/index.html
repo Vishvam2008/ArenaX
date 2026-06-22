@@ -179,7 +179,7 @@
     </div>
 
     <div style="margin-top: 12px;">
-<a href="/public/apk/" style="font-size: 13px; color: var(--secondary-light); text-decoration: underline;">
+      <a href="/apk/" style="font-size: 13px; color: var(--secondary-light); text-decoration: underline;">
         🤖 Download ArenaX Android App (APK)
       </a>
     </div>
@@ -203,13 +203,13 @@
       if (restored && auth.isLoggedIn()) {
         // Logged in
         container.innerHTML = `
-          <a href="/public/dashboard/" class="btn-hero-primary">🎮 Go to Dashboard</a>
+          <a href="/dashboard/" class="btn-hero-primary">🎮 Go to Dashboard</a>
         `;
       } else {
         // Not logged in
         container.innerHTML = `
-          <a href="/public/auth/login.html" class="btn-hero-primary">⚡ Login to Play</a>
-          <a href="/public/auth/register.html" class="btn-hero-secondary">🛡️ Create Free Account</a>
+          <a href="/auth/login.html" class="btn-hero-primary">⚡ Login to Play</a>
+          <a href="/auth/register.html" class="btn-hero-secondary">🛡️ Create Free Account</a>
         `;
       }
     })();
