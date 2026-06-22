@@ -1,0 +1,57 @@
+{
+  "rewrites": [
+    {
+      "source": "/",
+      "destination": "/public/index.html"
+    },
+    {
+      "source": "/admin/:path*",
+      "destination": "/public/admin/:path*"
+    },
+    {
+      "source": "/auth/:path*",
+      "destination": "/public/auth/:path*"
+    },
+    {
+      "source": "/dashboard/:path*",
+      "destination": "/public/dashboard/:path*"
+    },
+    {
+      "source": "/leaderboard/:path*",
+      "destination": "/public/leaderboard/:path*"
+    },
+    {
+      "source": "/profile/:path*",
+      "destination": "/public/profile/:path*"
+    },
+    {
+      "source": "/teams/:path*",
+      "destination": "/public/teams/:path*"
+    },
+    {
+      "source": "/tickets/:path*",
+      "destination": "/public/tickets/:path*"
+    },
+    {
+      "source": "/tournaments/:path*",
+      "destination": "/public/tournaments/:path*"
+    },
+    {
+      "source": "/wallet/:path*",
+      "destination": "/public/wallet/:path*"
+    },
+    {
+      "source": "/apk/:path*",
+      "destination": "/public/apk/:path*"
+    },
+    {
+      "source": "/assets/:path*",
+      "destination": "/public/assets/:path*"
+    },
+    {
+      "source": "/:path*",
+      "destination": "/public/index.html"
+    }
+  ]
+}
+
