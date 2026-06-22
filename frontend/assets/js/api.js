@@ -1,5 +1,5 @@
 // api.js - ArenaX API Client
-const API_BASE = window.ARENAX_API_URL || 'http://localhost:5000/api';
+export const API_BASE = window.ARENAX_API_URL || 'http://localhost:5000/api';
 
 // Module-level token store (in-memory only, never persisted to disk)
 let _authToken = null;

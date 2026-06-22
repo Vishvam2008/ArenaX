@@ -227,7 +227,7 @@
   <div id="toast-container" style="position: fixed; top: 20px; right: 20px; z-index: 9999; pointer-events: none;"></div>
 
   <script type="module">
-    import { api } from '/assets/js/api.js';
+    import { api, API_BASE } from '/assets/js/api.js';
     import { adminCore } from '/assets/js/admin-core.js';
 
     const $ = id => document.getElementById(id);
@@ -443,7 +443,7 @@
           btn.addEventListener('click', () => {
             const tid = btn.dataset.id;
             // Build CSV download url using admin auth token
-            const url = `http://localhost:5000/api/admin/tournaments/${tid}/participants?token=${adminCore.token}`;
+            const url = `${API_BASE}/admin/tournaments/${tid}/participants?token=${adminCore.token}`;
             window.open(url, '_blank');
           });
         });
