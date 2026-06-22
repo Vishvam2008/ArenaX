@@ -1,24 +1,46 @@
 # DEPLOYMENT_FIX_REPORT.md
 
-## Root cause (why Vercel returned 404)
-- Root directory on Vercel is set to **frontend**.
-- The site’s entry file exists at **frontend/public/index.html**.
-- Without a Vercel static routing config, Vercel does not automatically map the site root path **/** to **/public/index.html** when the repository is organized as `public/` under the chosen root.
-- As a result, requests to **/** (and SPA-like nested paths) were not being served the entry HTML, leading to **404 NOT_FOUND**.
+## Root cause
+1. **Vercel routing served 404 for “/”** even though `frontend/public/index.html` exists.
+2. The code also had **hardcoded absolute links to `/public/...`** (e.g. `/public/auth/login.html`, `/public/dashboard/`, `/public/apk/`).
+   - Since Vercel deployment root is `frontend`, the folder `frontend/public` is mapped to `/`.
+   - Therefore, paths like `/public/auth/login.html` do **not** exist in production → `404 NOT_FOUND`.
 
-## What I changed (files changed)
-1. **Added** `frontend/vercel.json`
-   - Creates explicit rewrites so that:
-     - `GET /` → `/public/index.html`
-     - Common nested routes (`/admin/*`, `/auth/*`, `/dashboard/*`, `/leaderboard/*`, `/profile/*`, `/teams/*`, `/tickets/*`, `/tournaments/*`, `/wallet/*`, `/apk/*`) map to the corresponding file trees under `/public`.
-     - Any other unmatched route `GET /:path*` falls back to `/public/index.html`.
+## Why 404 occurred (detail)
+- Deployment root directory on Vercel is **`frontend`**.
+- That means the correct production paths are:
+  - `frontend/public/index.html` → `/`
+  - `frontend/public/apk/index.html` → `/apk/`
+  - `frontend/public/auth/login.html` → `/auth/login.html`
+- Without proper Vercel configuration, Vercel doesn’t always correctly fall back to `index.html` for `/` and nested routes.
+- Additionally, the UI was generating non-existent `/public/*` URLs.
 
-## Why the fix resolves the 404
-- The rewrite `{"source": "/", "destination": "/public/index.html"}` guarantees the homepage loads from the existing `frontend/public/index.html`.
-- The catch-all fallback `{"source": "/:path*", "destination": "/public/index.html"}` ensures Vercel serves `index.html` for SPA-style / deep-link paths instead of returning NOT_FOUND.
-- Additional explicit rewrites for known directories keep deep links consistent with the static file layout.
+## Fix summary
+### 1) Added Vercel static rewrite configuration
+- **File added:** `frontend/vercel.json`
+- Added rewrites so:
+  - `GET /` serves `frontend/public/index.html`
+  - Nested paths like `/admin/...`, `/auth/...`, `/dashboard/...`, etc. map into `frontend/public/<section>/...`
+  - SPA-like fallback routes return `/public/index.html`
 
-## Deployment notes
-- Root directory remains **frontend**.
-- No build/output directory assumptions were added because the project is a static frontend using files directly from `public/`.
+### 2) Corrected broken absolute links inside homepage
+- **File updated:** `frontend/public/index.html`
+- Removed incorrect `/public/` prefixes from absolute URLs:
+  - `/public/dashboard/` → `/dashboard/`
+  - `/public/auth/login.html` → `/auth/login.html`
+  - `/public/auth/register.html` → `/auth/register.html`
+  - `/public/apk/` → `/apk/`
+
+## Files changed/added
+- **Added:** `frontend/vercel.json`
+- **Changed:** `frontend/public/index.html`
+
+## Why the fix resolves it
+- `frontend/vercel.json` ensures Vercel serves the correct entrypoint (`/public/index.html`) for `/` and supports deep links to nested static pages.
+- Corrected absolute paths ensure the UI navigates to real deployed files (mapped from `frontend/public/*` to `/ *`) rather than non-existent `/public/*` routes.
+
+## Validation checklist performed
+- Confirmed `frontend/public/index.html` now uses correct production paths (`/apk/`, `/dashboard/`, `/auth/...`).
+- Confirmed `frontend/public/index.html` exists.
+- Confirmed Vercel config exists at `frontend/vercel.json`.
 
